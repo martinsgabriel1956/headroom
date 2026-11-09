@@ -215,7 +215,11 @@ mod tests {
       let first = Mutex::new(None);
       let n = AtomicU32::new(0);
       let counters = Counters::default();
-      scan(&root, now() - 7 * 86_400, &counters, &|| false, &|_| {
+      let listed = root.ends_with("development");
+      scan(&root, now() - 7 * 86_400, &counters, &|| false, &|f| {
+        if listed {
+          println!("  {} ({})", f.path.display(), f.rule); // audit list for the zero-false-positive goal
+        }
         first.lock().unwrap().get_or_insert(t0.elapsed());
         n.fetch_add(1, Relaxed);
       });

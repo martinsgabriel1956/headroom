@@ -265,6 +265,29 @@ mod tests {
     events.into_inner().unwrap().into_iter().filter(|e| !matches!(e, ScanEvent::Progress { .. })).collect()
   }
 
+  /// PRD goal "o número confere": deletes every artifact under `$HEADROOM_VERIFY` and compares the
+  /// reported freed bytes with the change in free space from `df`. Destructive by design; run by hand:
+  /// `HEADROOM_VERIFY=~/headroom-verify cargo test -- --ignored --nocapture freed_matches_df`.
+  #[test]
+  #[ignore]
+  fn freed_matches_df() {
+    let root = PathBuf::from(std::env::var_os("HEADROOM_VERIFY").expect("set HEADROOM_VERIFY"));
+    let avail = || {
+      let out = std::process::Command::new("df").args(["-B1", "--output=avail"]).arg(&root).output().unwrap();
+      String::from_utf8(out.stdout).unwrap().lines().last().unwrap().trim().parse::<i64>().unwrap()
+    };
+    let state = AppState::default();
+    collect(&state, &root);
+    let ids: Vec<u32> = state.last.lock().unwrap().as_ref().unwrap().items.keys().copied().collect();
+    let before = avail();
+    let report = run_delete(&state, 1, ids, &|_| {}).unwrap();
+    std::thread::sleep(Duration::from_secs(2)); // let the filesystem settle its counters
+    let delta = avail() - before;
+    let error = (delta - report.freed as i64).abs() as f64 / report.freed.max(1) as f64;
+    println!("informado {} bytes, df mudou {} bytes, diferença {:.2}%", report.freed, delta, error * 100.0);
+    assert!(error <= 0.05, "PRD: margem de até 5%");
+  }
+
   #[test]
   fn scan_emits_in_order_and_ids_match_state() {
     let t = test_dir("lib-scan");
