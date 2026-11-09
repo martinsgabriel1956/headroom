@@ -20,7 +20,12 @@ use std::{
   thread,
   time::{Duration, Instant, SystemTime},
 };
-use tauri::{ipc::Channel, AppHandle, Manager, State};
+use tauri::{
+  ipc::Channel,
+  menu::{Menu, MenuItem, PredefinedMenuItem},
+  tray::TrayIconBuilder,
+  AppHandle, Emitter, Manager, State, WindowEvent,
+};
 
 const ACTIVE_DAYS: i64 = 7;
 
@@ -284,12 +289,89 @@ async fn delete(app: AppHandle, generation: u64, ids: Vec<u32>, on_event: Channe
   .map_err(|e| e.to_string())?
 }
 
+/// Whether this desktop session has a tray to hide into (a StatusNotifierItem host on D-Bus).
+/// Without one, closing the window must quit: a hidden app with no tray could not be ended.
+struct Tray(bool);
+
+fn tray_available() -> bool {
+  std::process::Command::new("busctl")
+    .args(["--user", "call", "org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "NameHasOwner", "s", "org.kde.StatusNotifierWatcher"])
+    .output()
+    .is_ok_and(|o| String::from_utf8_lossy(&o.stdout).trim() == "b true")
+}
+
+fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
+  let menu = Menu::with_items(
+    app,
+    &[
+      &MenuItem::with_id(app, "open", "Abrir Headroom", true, None::<&str>)?,
+      &MenuItem::with_id(app, "scan", "Escanear agora", true, None::<&str>)?,
+      &PredefinedMenuItem::separator(app)?,
+      &MenuItem::with_id(app, "quit", "Sair", true, None::<&str>)?,
+    ],
+  )?;
+  // On Linux the id becomes the icon file and the AppIndicator id: a shared id ("main") lets another
+  // Tauri app overwrite our tray icon (learned in switch-terminal).
+  let mut tray = TrayIconBuilder::with_id("headroom")
+    .tooltip("Headroom")
+    .menu(&menu)
+    .show_menu_on_left_click(true)
+    .on_menu_event(|app, event| match event.id().as_ref() {
+      "open" => show_window(app),
+      "scan" => {
+        show_window(app);
+        let _ = app.emit("scan-now", ());
+      }
+      "quit" => app.exit(0),
+      _ => {}
+    });
+  if let Some(icon) = app.default_window_icon() {
+    tray = tray.icon(icon.clone());
+  }
+  tray.build(app)?;
+  Ok(())
+}
+
+/// PRD RF4: the first time the window is closed, explain that Headroom keeps running in the tray.
+fn close_notice_once(app: &AppHandle) {
+  let Ok(dir) = app.path().app_data_dir() else { return };
+  let file = dir.join("state.json");
+  if fs::read_to_string(&file).is_ok_and(|s| s.contains("\"closeNoticeShown\": true")) {
+    return;
+  }
+  notify::notify(app, "O Headroom continua na bandeja", "Ele avisa quando o disco encher ou quando valer limpar. Para sair, use Sair no menu da bandeja.");
+  let _ = fs::create_dir_all(&dir);
+  let _ = fs::write(&file, "{ \"closeNoticeShown\": true }\n");
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
+    // Opening Headroom again only brings back the running one (PRD RF7). Must be the first plugin.
+    .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| show_window(app)))
     .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_log::Builder::default().level(log::LevelFilter::Info).build())
     .manage(AppState::default())
+    .setup(|app| {
+      let tray = tray_available();
+      log::info!("bandeja do sistema {}", if tray { "disponível" } else { "indisponível: fechar a janela encerra o app" });
+      if tray {
+        setup_tray(app.handle())?;
+      }
+      app.manage(Tray(tray));
+      Ok(())
+    })
+    // With a tray, the X only hides the window (PRD RF2). Quitting is in the tray menu.
+    .on_window_event(|window, event| {
+      if let WindowEvent::CloseRequested { api, .. } = event {
+        let app = window.app_handle();
+        if app.try_state::<Tray>().is_some_and(|t| t.0) {
+          api.prevent_close();
+          let _ = window.hide();
+          close_notice_once(app);
+        }
+      }
+    })
     .invoke_handler(tauri::generate_handler![scan, measure, delete, snapshot])
     .run(tauri::generate_context!())
     .expect("error while building tauri application");
