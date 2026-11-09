@@ -289,6 +289,46 @@ async fn delete(app: AppHandle, generation: u64, ids: Vec<u32>, on_event: Channe
   .map_err(|e| e.to_string())?
 }
 
+/// Same rule as the screen: "6,8 GB", "512 MB".
+pub(crate) fn fmt_bytes(b: u64) -> String {
+  if b >= 1_000_000_000 {
+    format!("{:.1} GB", b as f64 / 1e9).replace('.', ",")
+  } else {
+    format!("{} MB", ((b as f64 / 1e6).round() as u64).max(1))
+  }
+}
+
+/// Root of the last scan, or the home folder before any.
+pub(crate) fn current_root(app: &AppHandle) -> PathBuf {
+  let state = app.state::<AppState>();
+  let root = state.last.lock().unwrap().as_ref().map(|s| s.root.clone());
+  root.unwrap_or_else(|| PathBuf::from(home()))
+}
+
+pub(crate) fn window_visible(app: &AppHandle) -> bool {
+  app.get_webview_window("main").and_then(|w| w.is_visible().ok()).unwrap_or(false)
+}
+
+/// Real bytes recoverable and project count of the last finished scan.
+pub(crate) fn recoverable(state: &AppState) -> Option<(u64, usize)> {
+  let g = state.last.lock().unwrap();
+  let sc = g.as_ref()?;
+  sc.done.as_ref()?;
+  let projects: HashSet<&Path> = sc.items.values().map(|f| f.project.as_path()).collect();
+  Some((real_of(sc.items.values().map(|f| &f.measured)), projects.len()))
+}
+
+/// The automatic scan: same rules as the manual one, nobody listening to the stream.
+/// None when it failed or a newer scan cancelled it.
+pub(crate) fn background_scan(app: &AppHandle, root: PathBuf) -> Option<(u64, usize)> {
+  let state = app.state::<AppState>();
+  if let Err(e) = run_scan(&state, root, home(), &|_| {}) {
+    log::warn!("varredura automática falhou: {e}");
+    return None;
+  }
+  recoverable(&state)
+}
+
 /// Whether this desktop session has a tray to hide into (a StatusNotifierItem host on D-Bus).
 /// Without one, closing the window must quit: a hidden app with no tray could not be ended.
 struct Tray(bool);
@@ -357,6 +397,7 @@ pub fn run() {
       log::info!("bandeja do sistema {}", if tray { "disponível" } else { "indisponível: fechar a janela encerra o app" });
       if tray {
         setup_tray(app.handle())?;
+        background::spawn(app.handle().clone());
       }
       app.manage(Tray(tray));
       Ok(())
@@ -438,6 +479,25 @@ mod tests {
     let ids: HashSet<u32> = events.iter().filter_map(|e| match e { ScanEvent::Artifact { artifact } => Some(artifact.id), _ => None }).collect();
     let g = state.last.lock().unwrap();
     assert_eq!(ids, g.as_ref().unwrap().items.keys().copied().collect());
+  }
+
+  #[test]
+  fn fmt_bytes_matches_the_screen() {
+    assert_eq!(fmt_bytes(6_800_000_000), "6,8 GB");
+    assert_eq!(fmt_bytes(512_000_000), "512 MB");
+    assert_eq!(fmt_bytes(10), "1 MB");
+  }
+
+  #[test]
+  fn recoverable_counts_the_finished_scan() {
+    let t = test_dir("lib-recoverable");
+    tree(&t);
+    let state = AppState::default();
+    assert!(recoverable(&state).is_none());
+    collect(&state, &t);
+    let (bytes, projects) = recoverable(&state).unwrap();
+    assert!(bytes >= 40_000);
+    assert_eq!(projects, 2);
   }
 
   #[test]
