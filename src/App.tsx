@@ -15,29 +15,22 @@ const total = (p: Project, m: Mode) => p.artifacts.reduce((s, a) => s + size(a, 
 const isActive = (p: Project) => p.days < ACTIVE_DAYS
 
 export default function App() {
-  const h = useHeadroom()
-  const projects = h.projects
-  const [mode, setMode] = useState<Mode>('real')
   const [selected, setSelected] = useState<Set<string>>(() => new Set())
-  const [hover, setHover] = useState<string | null>(null)
   const [result, setResult] = useState<DeleteResult | null>(null)
-  const [deleting, setDeleting] = useState<number | null>(null) // items done so far, while a deletion runs
-  const [measured, setMeasured] = useState<{ key: string; bytes: number } | null>(null)
-  const dialog = useRef<HTMLDialogElement>(null)
-
-  // A new scan starts from a clean slate (PRD RF3, RF9).
-  const scanning = h.status.phase === 'scanning'
+  // Every new scan (manual, tray or background) starts from a clean slate (PRD RF3, RF9).
   const clearSelection = () => {
     setSelected(new Set())
     setResult(null)
   }
-  const rescan = () => {
-    clearSelection()
-    h.rescan()
-  }
-  const chooseRoot = async () => {
-    if (await h.chooseRoot()) clearSelection()
-  }
+  const h = useHeadroom(clearSelection)
+  const projects = h.projects
+  const [mode, setMode] = useState<Mode>('real')
+  const [hover, setHover] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState<number | null>(null) // items done so far, while a deletion runs
+  const [measured, setMeasured] = useState<{ key: string; bytes: number } | null>(null)
+  const dialog = useRef<HTMLDialogElement>(null)
+
+  const scanning = h.status.phase === 'scanning'
 
   const sorted = useMemo(() => [...projects].sort((a, b) => total(b, mode) - total(a, mode)), [projects, mode])
   const all = sorted.flatMap((p) => p.artifacts)
@@ -82,7 +75,7 @@ export default function App() {
         <h1 className="flex items-center gap-2.5 text-[19px] font-bold tracking-[0.01em]">
           <Mark /> Headroom
         </h1>
-        <button onClick={chooseRoot} className="flex items-center gap-2 rounded-md border border-rule px-2.5 py-1 text-[14px] hover:border-ink" title="Escolher outra pasta raiz">
+        <button onClick={h.chooseRoot} className="flex items-center gap-2 rounded-md border border-rule px-2.5 py-1 text-[14px] hover:border-ink" title="Escolher outra pasta raiz">
           <Folder /> {h.root || '~'}
         </button>
         {!h.live && <span className="rounded border border-rule px-2 py-0.5 text-[12px] font-medium tracking-[0.04em] text-graphite uppercase">Dados de exemplo</span>}
@@ -94,7 +87,7 @@ export default function App() {
             </button>
           ))}
         </div>
-        <button onClick={rescan} className="rounded-md border border-ink px-3.5 py-1.5 text-[14px] font-semibold hover:bg-paper-2">Escanear</button>
+        <button onClick={h.rescan} className="rounded-md border border-ink px-3.5 py-1.5 text-[14px] font-semibold hover:bg-paper-2">Escanear</button>
       </header>
 
       <section className="flex min-h-0 flex-col px-8 pt-4 pb-3">
