@@ -8,6 +8,7 @@ export type Artifact = {
   days: number // days since last modification
 }
 
+// `days`: days since the project was last edited; Infinity when it is not active (or not known yet).
 export type Project = { id: string; name: string; path: string; days: number; artifacts: Artifact[] }
 
 const GB = 1e9
