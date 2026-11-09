@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test": "node src/treemap.test.ts"
+    "test": "node src/treemap.test.ts",
+    "tauri": "tauri"
   },
   "dependencies": {
     "@fontsource/barlow": "^5.3.0",

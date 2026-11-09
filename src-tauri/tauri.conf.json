@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "headroom",
+  "productName": "Headroom",
   "version": "0.1.0",
-  "identifier": "com.tauri.dev",
+  "identifier": "dev.headroom.app",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5174",
@@ -13,10 +13,11 @@
     "windows": [
       {
         "title": "Headroom",
-        "width": 800,
-        "height": 600,
-        "resizable": true,
-        "fullscreen": false
+        "width": 1280,
+        "height": 800,
+        "minWidth": 1024,
+        "minHeight": 680,
+        "resizable": true
       }
     ],
     "security": {

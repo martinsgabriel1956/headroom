@@ -1,8 +1,8 @@
 [package]
-name = "app"
+name = "headroom"
 version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
+description = "Limpa artefatos regeneráveis de projetos"
+authors = ["Gabriel Martins"]
 license = ""
 repository = ""
 edition = "2024"
@@ -11,7 +11,7 @@ rust-version = "1.90"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
-name = "app_lib"
+name = "headroom_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
@@ -23,3 +23,5 @@ serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
 tauri = { version = "2.12.5" }
 tauri-plugin-log = "2"
+tauri-plugin-dialog = "2"
+rayon = "1"
