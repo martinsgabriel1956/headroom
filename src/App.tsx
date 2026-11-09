@@ -351,7 +351,7 @@ function Plan(props: {
           <span key={n} className="flex items-center gap-1.5 whitespace-nowrap"><KeyTag n={n} active={isActive(p)} /> {p.name} <span className="text-graphite">{fmt(total(p, mode))}</span></span>
         ))}
         {rest.length > 0 && (
-          <span className="flex items-center gap-2 whitespace-nowrap"><i className="inline-block h-3.5 w-6 border border-ink bg-paper-2" /> +{rest.length} projetos menores <span className="text-graphite">{fmt(restBytes)} · na lista</span></span>
+          <span className="flex items-center gap-2 whitespace-nowrap"><i className="inline-block h-3.5 w-6 border border-ink bg-paper-2" /> +{rest.length} {rest.length === 1 ? 'projeto menor' : 'projetos menores'} <span className="text-graphite">{fmt(restBytes)} · na lista</span></span>
         )}
       </div>
     </div>
