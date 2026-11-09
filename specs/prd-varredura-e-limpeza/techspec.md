@@ -105,10 +105,10 @@ type ScanEvent =
   | { type: 'artifact'; artifact: ArtifactDto }
   | { type: 'progress'; dirs: number }                       // no máximo a cada 100 ms
   | { type: 'done'; millis: number; skipped: number; active: { project: string; days: number }[] }
-type ArtifactDto = { id: number; project: string; projectPath: string; kind: string; rel: string;
+type ArtifactDto = { id: number; project: string /* caminho absoluto do projeto */; kind: string; rel: string;
                      rule: string; real: number; apparent: number; days: number }
 type DeleteEvent = { type: 'deleting' | 'deleted'; id: number } | { type: 'refused'; id: number; reason: string }
-type DeleteReport = { freed: number; refused: { id: number; reason: string }[] }
+type DeleteReport = { freed: number; removed: number[]; refused: { id: number; reason: string }[] } // removed: ids que a tela tira (apagados, apagados em parte ou que já não existiam)
 ```
 
 - **`real` por artefato:** os blocos dos arquivos com uma ligação, mais os arquivos com várias ligações cujas ligações estão todas dentro dele, mais os blocos dos próprios diretórios.
@@ -196,6 +196,10 @@ Não há métrica remota, porque nada sai da máquina.
 - **Seleção medida no backend com debounce de 150 ms.** O total exato depende de interseção de inodes. Somar os `real` no frontend seria quase sempre igual, mas erraria no caso do RF19.
 - **Navegador continua com dados de exemplo.** Permite seguir ajustando a tela com o Vite puro e não custa nada no app real.
 
+- **A planta agrupa os projetos pequenos.** O desenho é feito no frontend: no máximo 24 cômodos, só os com pelo menos 1% do total, e o resto num cômodo "+N projetos" não selecionável. O backend continua mandando tudo. O corte foi descoberto na primeira varredura real de `~`, que achou 176 projetos.
+- **O frontend é verificado à mão, e a exclusão contra o `df` por teste.** Numa sessão Wayland, o `xdotool` não consegue clicar no app. A conferência do PRD foi feita pelo teste ignorado `freed_matches_df`, que roda o mesmo `run_delete` do comando. A lista de auditoria sai do teste ignorado `timing`.
+- **Aviso de lint aceito.** O `oxlint` aponta `set-state-in-effect` em `useHeadroom`, no efeito que dispara a varredura ao montar. É sincronização com um sistema externo (o comando `scan`), e o reset de estado precisa acontecer junto. O reset da seleção em `App.tsx` saiu do efeito e foi para os handlers de Escanear e de troca de raiz.
+
 ### Riscos conhecidos
 
 - **`~` é grande.** Com cache frio, a varredura pode levar dezenas de segundos. A mitigação é o streaming com medição paralela. Ainda falta medir o tempo real de `~` na máquina do usuário. O RF5 mostra o andamento.
@@ -203,6 +207,7 @@ Não há métrica remota, porque nada sai da máquina.
 - **Pastas de ferramentas em `~`.** O usuário aceitou o risco no PRD (RF7). Nada técnico mitiga além da confirmação explícita.
 - **Corrida entre varredura e exclusão.** A revalidação cobre o caso da pasta que mudou. Um arquivo novo criado dentro do artefato entre a medição e a exclusão faz o `freed` subestimar um pouco. Isso é aceitável dentro da margem de 5%.
 - **`remove_dir_all` parcial.** Tratado como recusa com motivo (ver Pontos de integração).
+- **CSP desligada.** `tauri.conf.json` mantém `csp: null`, como veio do scaffold. O app só carrega o próprio frontend e não usa rede, mas vale ligar uma CSP restrita antes da distribuição (v3).
 - **Montagens FUSE lentas.** São evitadas pelo corte de `st_dev`. Um `stat` na raiz de uma montagem travada ainda pode demorar, e é a única chamada feita nela.
 
 ### Conformidade com regras do projeto
@@ -230,3 +235,13 @@ O projeto não tem `CLAUDE.md` nem diretório de regras. As convenções que se 
 ## Histórico
 
 **2026-11-09**. Documento criado.
+
+**2026-11-09**. Fechamento (`sdd-review`). Mudanças registradas:
+- `DeleteReport` ganhou `removed`.
+- `ArtifactDto` ficou sem `projectPath`, porque `project` já é o caminho absoluto.
+- A planta agrupa os projetos pequenos.
+- A exclusão contra o `df` passou a ser verificada pelo teste ignorado `freed_matches_df`.
+- O aviso de lint foi aceito.
+- O risco da CSP ficou anotado.
+
+O resto saiu como planejado: o percurso com `rayon` e cortes de link, disco, artefato e `.git`; o estado por geração; o `Channel`; e o tamanho real por blocos e ligações.

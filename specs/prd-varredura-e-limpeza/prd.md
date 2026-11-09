@@ -91,6 +91,7 @@ A tela não muda de estrutura: é a Planta Baixa descrita no DESIGN.md, com a pl
 - **Botão da pasta raiz:** passa a abrir o seletor nativo.
 - **Varredura em andamento:** a planta e a lista vão se enchendo, e o cabeçalho da planta mostra o andamento e, no fim, a contagem, o tempo e as pastas puladas.
 - **Estado vazio:** uma raiz sem nenhum artefato mostra a planta vazia com a mensagem que já existe.
+- **Muitos projetos:** a planta mostra no máximo 24 projetos, só os que têm pelo menos 1% do total. Os outros viram um único cômodo "+N projetos", que não é selecionável. Todos continuam na lista, onde podem ser selecionados.
 - **Falhas de exclusão:** quando algum item falha, o resultado final mostra quais foram e por quê, com a mesma voz do resto da tela, sem alarme.
 - **Acessibilidade:** o andamento e o resultado da varredura e da exclusão são anunciados para leitores de tela. Todos os controles continuam acessíveis pelo teclado.
 
@@ -121,3 +122,9 @@ A tela não muda de estrutura: é a Planta Baixa descrita no DESIGN.md, com a pl
 **2026-11-09**. Raiz padrão mudou de `~/Documentos/development` para `~` (RF1). Decisão do usuário: pastas ocultas são varridas sem exceção (RF7). O usuário aceitou o risco de artefatos de ferramentas aparecerem na lista. A meta de zero falso positivo continua medida em `~/Documentos/development`. A meta de tempo total passou a valer só para essa pasta de referência.
 
 **2026-11-09**. Decisão do usuário durante o techspec: a varredura fica no sistema de arquivos da raiz e não entra em outras montagens (RF7). Isso evita travar em pastas de rede e FUSE, e garante que o espaço liberado é do disco mostrado.
+
+**2026-11-09**. Fechamento (`sdd-review`). A primeira varredura real de `~` achou 176 projetos, e a legenda de chaves esmagava a planta. A planta passou a agrupar os projetos pequenos num cômodo "+N projetos" (Experiência do usuário). Resultados medidos contra os objetivos, com cache aquecido:
+- **Desempenho:** `~/Documentos/development` em 0,17 s e `~` em 0,32 s, ambos em build de release. O primeiro resultado sai em menos de 2 ms.
+- **Número confere:** numa pasta de teste, o app informou 1.572.876.288 bytes liberados e o `df` mudou 1.572.818.944 (0,004%). O arquivo ligado por hardlink a outro fora da pasta não foi contado.
+- **Auditoria:** 30 artefatos em `~/Documentos/development`, todos regeneráveis pela lista do teste de tempo.
+- **Pendente:** o espaço recuperado na primeira limpeza real do usuário ainda não foi registrado.

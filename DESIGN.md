@@ -226,7 +226,8 @@ A single 1px ink outline at 6px radius. The selected segment is solid ink with p
 - **Key tag:** when the lettering doesn't fit, the room shows a circled number, plus its area if that fits. The legend under the plan explains it as number, name, and area.
 - **Callout:** a room too small even for the tag (under 30px on a side) gets the tag outside the room, joined by a 1.25px ink leader line that ends in a 2px dot inside the room.
 - **Alcove:** paper floor, labelled with artifact name (12px, graphite) over size (14px, semibold) when larger than about 84 by 40px. Selected shows the blue hatch. An active project shows poché. Hover shows a 2px ink outline inset 4px, never blue.
-- **Legend:** hatch swatch "Selecionado para limpar", poché swatch "Ativo · últimos 7 dias", then the keyed rooms.
+- **Others room:** the plan draws at most 24 projects, and only those at or above 1% of the total. All the rest are pooled into one paper-2 room, lettered "+N projetos" over its area. It has no alcoves and no selection, because every project is still in the list.
+- **Legend:** hatch swatch "Selecionado para limpar", poché swatch "Ativo · últimos 7 dias", then the keyed rooms, then a paper-2 swatch "+N projetos menores · área · na lista" when the others room exists.
 
 ### ATIVO Stamp
 A rubber-stamp mark for projects modified in the last 7 days: 1.5px ink border, paper ground, 11px bold capitals tracked at 0.1em, no radius. Used in plan lettering, list group rows (with age), and the dialog warning.

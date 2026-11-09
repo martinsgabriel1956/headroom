@@ -23,8 +23,9 @@ export type DeleteResult = { freed: number; refused: { label: string; reason: st
 const live = isTauri()
 
 export function useHeadroom() {
-  const projects = useRef(new Map<string, Project>(live ? [] : SAMPLE.map((p) => [p.id, p])))
-  const [view, setView] = useState<Project[]>(() => [...projects.current.values()])
+  // The ref owns its own copies: deletions edit them in place, never the rendered state or SAMPLE.
+  const projects = useRef(new Map<string, Project>(live ? [] : SAMPLE.map((p) => [p.id, { ...p, artifacts: [...p.artifacts] }])))
+  const [view, setView] = useState<Project[]>(live ? [] : SAMPLE)
   const [root, setRoot] = useState(live ? '' : '~/Documentos/development')
   const [status, setStatus] = useState<Status>(
     live ? { phase: 'scanning', dirs: 0 } : { phase: 'done', millis: 0, skipped: 0, count: SAMPLE.flatMap((p) => p.artifacts).length },
@@ -95,10 +96,13 @@ export function useHeadroom() {
     root,
     projects: view,
     status,
-    async chooseRoot() {
-      if (!live) return
+    /** Resolves true when a folder was picked and a new scan started. */
+    async chooseRoot(): Promise<boolean> {
+      if (!live) return false
       const dir = await open({ directory: true, defaultPath: absRoot.current })
-      if (typeof dir === 'string') scan(dir)
+      if (typeof dir !== 'string') return false
+      scan(dir)
+      return true
     },
     rescan: () => scan(absRoot.current),
     measure,
@@ -116,8 +120,9 @@ export function useHeadroom() {
       }
       const gone = new Set(live ? report.removed.map(String) : ids)
       for (const [k, p] of projects.current) {
-        p.artifacts = p.artifacts.filter((a) => !gone.has(a.id))
-        if (!p.artifacts.length) projects.current.delete(k)
+        const artifacts = p.artifacts.filter((a) => !gone.has(a.id))
+        if (artifacts.length) projects.current.set(k, { ...p, artifacts })
+        else projects.current.delete(k)
       }
       flush()
       return { freed: report.freed, refused: report.refused.map((r) => ({ label: labels.get(String(r.id)) ?? String(r.id), reason: r.reason })) }

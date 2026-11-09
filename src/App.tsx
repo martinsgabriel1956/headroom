@@ -27,12 +27,17 @@ export default function App() {
 
   // A new scan starts from a clean slate (PRD RF3, RF9).
   const scanning = h.status.phase === 'scanning'
-  useEffect(() => {
-    if (scanning) {
-      setSelected(new Set())
-      setResult(null)
-    }
-  }, [scanning])
+  const clearSelection = () => {
+    setSelected(new Set())
+    setResult(null)
+  }
+  const rescan = () => {
+    clearSelection()
+    h.rescan()
+  }
+  const chooseRoot = async () => {
+    if (await h.chooseRoot()) clearSelection()
+  }
 
   const sorted = useMemo(() => [...projects].sort((a, b) => total(b, mode) - total(a, mode)), [projects, mode])
   const all = sorted.flatMap((p) => p.artifacts)
@@ -77,7 +82,7 @@ export default function App() {
         <h1 className="flex items-center gap-2.5 text-[19px] font-bold tracking-[0.01em]">
           <Mark /> Headroom
         </h1>
-        <button onClick={h.chooseRoot} className="flex items-center gap-2 rounded-md border border-rule px-2.5 py-1 text-[14px] hover:border-ink" title="Escolher outra pasta raiz">
+        <button onClick={chooseRoot} className="flex items-center gap-2 rounded-md border border-rule px-2.5 py-1 text-[14px] hover:border-ink" title="Escolher outra pasta raiz">
           <Folder /> {h.root || '~'}
         </button>
         {!h.live && <span className="rounded border border-rule px-2 py-0.5 text-[12px] font-medium tracking-[0.04em] text-graphite uppercase">Dados de exemplo</span>}
@@ -89,7 +94,7 @@ export default function App() {
             </button>
           ))}
         </div>
-        <button onClick={h.rescan} className="rounded-md border border-ink px-3.5 py-1.5 text-[14px] font-semibold hover:bg-paper-2">Escanear</button>
+        <button onClick={rescan} className="rounded-md border border-ink px-3.5 py-1.5 text-[14px] font-semibold hover:bg-paper-2">Escanear</button>
       </header>
 
       <section className="flex min-h-0 flex-col px-8 pt-4 pb-3">
@@ -162,7 +167,7 @@ export default function App() {
 
       <footer className="flex items-center gap-10 border-t-[1.5px] border-ink px-8">
         {result && !picked.length ? (
-          <p className="line-clamp-2 flex-1 text-[15px]" title={result.refused.map((r) => `${r.label}: ${r.reason}`).join('\n')}>
+          <p role="status" className="line-clamp-2 flex-1 text-[15px]" title={result.refused.map((r) => `${r.label}: ${r.reason}`).join('\n')}>
             <b>{fmt(result.freed)} liberados.</b>{' '}
             {result.refused.length ? (
               <span>
