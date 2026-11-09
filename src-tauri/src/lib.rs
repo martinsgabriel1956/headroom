@@ -1,5 +1,7 @@
+mod background;
 mod delete;
 mod measure;
+mod notify;
 mod rules;
 mod scan;
 
@@ -18,7 +20,12 @@ use std::{
   thread,
   time::{Duration, Instant, SystemTime},
 };
-use tauri::{ipc::Channel, AppHandle, Manager, State};
+use tauri::{
+  ipc::Channel,
+  menu::{Menu, MenuItem, PredefinedMenuItem},
+  tray::TrayIconBuilder,
+  AppHandle, Emitter, Manager, State, WindowEvent,
+};
 
 const ACTIVE_DAYS: i64 = 7;
 
@@ -28,6 +35,8 @@ struct Scan {
   root: PathBuf,
   dev: u64,
   items: HashMap<u32, Found>,
+  /// Summary of the finished scan; None while it runs or if it was cancelled.
+  done: Option<DoneDto>,
 }
 
 #[derive(Default)]
@@ -50,6 +59,24 @@ struct ArtifactDto {
 }
 
 #[derive(Serialize, Clone, Debug)]
+struct DoneDto {
+  millis: u64,
+  skipped: u64,
+  count: usize,
+  active: Vec<ActiveDto>,
+}
+
+#[derive(Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct SnapshotDto {
+  generation: u64,
+  root: String,
+  home: String,
+  artifacts: Vec<ArtifactDto>,
+  done: Option<DoneDto>,
+}
+
+#[derive(Serialize, Clone, Debug)]
 struct ActiveDto {
   project: String,
   days: i64,
@@ -61,7 +88,7 @@ enum ScanEvent {
   Started { generation: u64, root: String, home: String },
   Artifact { artifact: ArtifactDto },
   Progress { dirs: u64 },
-  Done { millis: u64, skipped: u64, count: usize, active: Vec<ActiveDto> },
+  Done(DoneDto),
 }
 
 #[derive(Serialize, Clone, Debug)]
@@ -116,7 +143,7 @@ fn run_scan(state: &AppState, root: PathBuf, home: String, emit: &(dyn Fn(ScanEv
   let root = fs::canonicalize(&root).map_err(|e| format!("Não deu para abrir {}: {e}", root.display()))?;
   let dev = fs::metadata(&root).map_err(|e| e.to_string())?.dev();
   let generation = state.generation.fetch_add(1, SeqCst) + 1;
-  *state.last.lock().unwrap() = Some(Scan { generation, root: root.clone(), dev, items: HashMap::new() });
+  *state.last.lock().unwrap() = Some(Scan { generation, root: root.clone(), dev, items: HashMap::new(), done: None });
   emit(ScanEvent::Started { generation, root: root.display().to_string(), home });
 
   let t0 = Instant::now();
@@ -147,8 +174,8 @@ fn run_scan(state: &AppState, root: PathBuf, home: String, emit: &(dyn Fn(ScanEv
     return Ok(());
   }
 
-  let g = state.last.lock().unwrap();
-  let sc = current(&g, generation)?;
+  let mut g = state.last.lock().unwrap();
+  let sc = g.as_mut().filter(|s| s.generation == generation).ok_or("A varredura mudou. Escaneie de novo.")?;
   let projects: HashSet<&Path> = sc.items.values().map(|f| f.project.as_path()).collect();
   let active = scan::active_projects(&recent, projects)
     .into_iter()
@@ -156,7 +183,10 @@ fn run_scan(state: &AppState, root: PathBuf, home: String, emit: &(dyn Fn(ScanEv
     .collect();
   let (millis, skipped, count) = (t0.elapsed().as_millis() as u64, counters.skipped.load(Relaxed), sc.items.len());
   log::info!("varredura de {}: {count} artefatos em {millis} ms, {} pastas, {skipped} puladas", root.display(), counters.dirs.load(Relaxed));
-  emit(ScanEvent::Done { millis, skipped, count, active });
+  let done = DoneDto { millis, skipped, count, active };
+  sc.done = Some(done.clone());
+  drop(g);
+  emit(ScanEvent::Done(done));
   Ok(())
 }
 
@@ -196,6 +226,15 @@ fn run_delete(state: &AppState, generation: u64, ids: Vec<u32>, emit: &dyn Fn(De
   Ok(DeleteReport { freed, removed, refused })
 }
 
+/// Brings the main window back from the tray, minimized or behind other windows.
+pub(crate) fn show_window(app: &AppHandle) {
+  if let Some(w) = app.get_webview_window("main") {
+    let _ = w.show();
+    let _ = w.unminimize();
+    let _ = w.set_focus();
+  }
+}
+
 #[tauri::command]
 async fn scan(app: AppHandle, root: Option<String>, on_event: Channel<ScanEvent>) -> Result<(), String> {
   let home = std::env::var("HOME").map_err(|_| "Sem $HOME definido.")?;
@@ -207,6 +246,29 @@ async fn scan(app: AppHandle, root: Option<String>, on_event: Channel<ScanEvent>
   })
   .await
   .map_err(|e| e.to_string())?
+}
+
+fn home() -> String {
+  std::env::var("HOME").unwrap_or_default()
+}
+
+/// The whole current scan at once, for a window that was hidden while it ran (PRD RF14).
+#[tauri::command]
+fn snapshot(state: State<AppState>) -> Option<SnapshotDto> {
+  snapshot_of(&state)
+}
+
+fn snapshot_of(state: &AppState) -> Option<SnapshotDto> {
+  let g = state.last.lock().unwrap();
+  let sc = g.as_ref()?;
+  let now = unix_now();
+  Some(SnapshotDto {
+    generation: sc.generation,
+    root: sc.root.display().to_string(),
+    home: home(),
+    artifacts: sc.items.values().map(|f| dto(f, now)).collect(),
+    done: sc.done.clone(),
+  })
 }
 
 #[tauri::command]
@@ -227,13 +289,131 @@ async fn delete(app: AppHandle, generation: u64, ids: Vec<u32>, on_event: Channe
   .map_err(|e| e.to_string())?
 }
 
+/// Same rule as the screen: "6,8 GB", "512 MB".
+pub(crate) fn fmt_bytes(b: u64) -> String {
+  if b >= 1_000_000_000 {
+    format!("{:.1} GB", b as f64 / 1e9).replace('.', ",")
+  } else {
+    format!("{} MB", ((b as f64 / 1e6).round() as u64).max(1))
+  }
+}
+
+/// Root of the last scan, or the home folder before any.
+pub(crate) fn current_root(app: &AppHandle) -> PathBuf {
+  let state = app.state::<AppState>();
+  let root = state.last.lock().unwrap().as_ref().map(|s| s.root.clone());
+  root.unwrap_or_else(|| PathBuf::from(home()))
+}
+
+pub(crate) fn window_visible(app: &AppHandle) -> bool {
+  app.get_webview_window("main").and_then(|w| w.is_visible().ok()).unwrap_or(false)
+}
+
+/// Real bytes recoverable and project count of the last finished scan.
+pub(crate) fn recoverable(state: &AppState) -> Option<(u64, usize)> {
+  let g = state.last.lock().unwrap();
+  let sc = g.as_ref()?;
+  sc.done.as_ref()?;
+  let projects: HashSet<&Path> = sc.items.values().map(|f| f.project.as_path()).collect();
+  Some((real_of(sc.items.values().map(|f| &f.measured)), projects.len()))
+}
+
+/// The automatic scan: same rules as the manual one, nobody listening to the stream.
+/// None when it failed or a newer scan cancelled it.
+pub(crate) fn background_scan(app: &AppHandle, root: PathBuf) -> Option<(u64, usize)> {
+  let state = app.state::<AppState>();
+  if let Err(e) = run_scan(&state, root, home(), &|_| {}) {
+    log::warn!("varredura automática falhou: {e}");
+    return None;
+  }
+  recoverable(&state)
+}
+
+/// Whether this desktop session has a tray to hide into (a StatusNotifierItem host on D-Bus).
+/// Without one, closing the window must quit: a hidden app with no tray could not be ended.
+struct Tray(bool);
+
+fn tray_available() -> bool {
+  std::process::Command::new("busctl")
+    .args(["--user", "call", "org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "NameHasOwner", "s", "org.kde.StatusNotifierWatcher"])
+    .output()
+    .is_ok_and(|o| String::from_utf8_lossy(&o.stdout).trim() == "b true")
+}
+
+fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
+  let menu = Menu::with_items(
+    app,
+    &[
+      &MenuItem::with_id(app, "open", "Abrir Headroom", true, None::<&str>)?,
+      &MenuItem::with_id(app, "scan", "Escanear agora", true, None::<&str>)?,
+      &PredefinedMenuItem::separator(app)?,
+      &MenuItem::with_id(app, "quit", "Sair", true, None::<&str>)?,
+    ],
+  )?;
+  // On Linux the id becomes the icon file and the AppIndicator id: a shared id ("main") lets another
+  // Tauri app overwrite our tray icon (learned in switch-terminal).
+  let mut tray = TrayIconBuilder::with_id("headroom")
+    .tooltip("Headroom")
+    .menu(&menu)
+    .show_menu_on_left_click(true)
+    .on_menu_event(|app, event| match event.id().as_ref() {
+      "open" => show_window(app),
+      "scan" => {
+        show_window(app);
+        let _ = app.emit("scan-now", ());
+      }
+      "quit" => app.exit(0),
+      _ => {}
+    });
+  if let Some(icon) = app.default_window_icon() {
+    tray = tray.icon(icon.clone());
+  }
+  tray.build(app)?;
+  Ok(())
+}
+
+/// PRD RF4: the first time the window is closed, explain that Headroom keeps running in the tray.
+fn close_notice_once(app: &AppHandle) {
+  let Ok(dir) = app.path().app_data_dir() else { return };
+  let file = dir.join("state.json");
+  if fs::read_to_string(&file).is_ok_and(|s| s.contains("\"closeNoticeShown\": true")) {
+    return;
+  }
+  notify::notify(app, "O Headroom continua na bandeja", "Ele avisa quando o disco encher ou quando valer limpar. Para sair, use Sair no menu da bandeja.");
+  let _ = fs::create_dir_all(&dir);
+  let _ = fs::write(&file, "{ \"closeNoticeShown\": true }\n");
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
+    // Opening Headroom again only brings back the running one (PRD RF7). Must be the first plugin.
+    .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| show_window(app)))
     .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_log::Builder::default().level(log::LevelFilter::Info).build())
     .manage(AppState::default())
-    .invoke_handler(tauri::generate_handler![scan, measure, delete])
+    .setup(|app| {
+      let tray = tray_available();
+      log::info!("bandeja do sistema {}", if tray { "disponível" } else { "indisponível: fechar a janela encerra o app" });
+      if tray {
+        setup_tray(app.handle())?;
+        background::spawn(app.handle().clone());
+      }
+      app.manage(Tray(tray));
+      Ok(())
+    })
+    // With a tray, the X only hides the window (PRD RF2). Quitting is in the tray menu.
+    .on_window_event(|window, event| {
+      if let WindowEvent::CloseRequested { api, .. } = event {
+        let app = window.app_handle();
+        if app.try_state::<Tray>().is_some_and(|t| t.0) {
+          api.prevent_close();
+          let _ = window.hide();
+          close_notice_once(app);
+        }
+      }
+    })
+    .invoke_handler(tauri::generate_handler![scan, measure, delete, snapshot])
     .run(tauri::generate_context!())
     .expect("error while building tauri application");
 }
@@ -295,10 +475,42 @@ mod tests {
     let state = AppState::default();
     let events = collect(&state, &t);
     assert!(matches!(events.first(), Some(ScanEvent::Started { generation: 1, .. })));
-    assert!(matches!(events.last(), Some(ScanEvent::Done { count: 2, .. })));
+    assert!(matches!(events.last(), Some(ScanEvent::Done(DoneDto { count: 2, .. }))));
     let ids: HashSet<u32> = events.iter().filter_map(|e| match e { ScanEvent::Artifact { artifact } => Some(artifact.id), _ => None }).collect();
     let g = state.last.lock().unwrap();
     assert_eq!(ids, g.as_ref().unwrap().items.keys().copied().collect());
+  }
+
+  #[test]
+  fn fmt_bytes_matches_the_screen() {
+    assert_eq!(fmt_bytes(6_800_000_000), "6,8 GB");
+    assert_eq!(fmt_bytes(512_000_000), "512 MB");
+    assert_eq!(fmt_bytes(10), "1 MB");
+  }
+
+  #[test]
+  fn recoverable_counts_the_finished_scan() {
+    let t = test_dir("lib-recoverable");
+    tree(&t);
+    let state = AppState::default();
+    assert!(recoverable(&state).is_none());
+    collect(&state, &t);
+    let (bytes, projects) = recoverable(&state).unwrap();
+    assert!(bytes >= 40_000);
+    assert_eq!(projects, 2);
+  }
+
+  #[test]
+  fn snapshot_returns_the_finished_scan() {
+    let t = test_dir("lib-snapshot");
+    tree(&t);
+    let state = AppState::default();
+    assert!(snapshot_of(&state).is_none(), "nothing before the first scan");
+    let events = collect(&state, &t);
+    let streamed: HashSet<u32> = events.iter().filter_map(|e| match e { ScanEvent::Artifact { artifact } => Some(artifact.id), _ => None }).collect();
+    let snap = snapshot_of(&state).unwrap();
+    assert_eq!(snap.artifacts.iter().map(|a| a.id).collect::<HashSet<_>>(), streamed);
+    assert_eq!(snap.done.unwrap().count, 2);
   }
 
   #[test]

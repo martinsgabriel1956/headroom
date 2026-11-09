@@ -15,29 +15,22 @@ const total = (p: Project, m: Mode) => p.artifacts.reduce((s, a) => s + size(a, 
 const isActive = (p: Project) => p.days < ACTIVE_DAYS
 
 export default function App() {
-  const h = useHeadroom()
-  const projects = h.projects
-  const [mode, setMode] = useState<Mode>('real')
   const [selected, setSelected] = useState<Set<string>>(() => new Set())
-  const [hover, setHover] = useState<string | null>(null)
   const [result, setResult] = useState<DeleteResult | null>(null)
-  const [deleting, setDeleting] = useState<number | null>(null) // items done so far, while a deletion runs
-  const [measured, setMeasured] = useState<{ key: string; bytes: number } | null>(null)
-  const dialog = useRef<HTMLDialogElement>(null)
-
-  // A new scan starts from a clean slate (PRD RF3, RF9).
-  const scanning = h.status.phase === 'scanning'
+  // Every new scan (manual, tray or background) starts from a clean slate (PRD RF3, RF9).
   const clearSelection = () => {
     setSelected(new Set())
     setResult(null)
   }
-  const rescan = () => {
-    clearSelection()
-    h.rescan()
-  }
-  const chooseRoot = async () => {
-    if (await h.chooseRoot()) clearSelection()
-  }
+  const h = useHeadroom(clearSelection)
+  const projects = h.projects
+  const [mode, setMode] = useState<Mode>('real')
+  const [hover, setHover] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState<number | null>(null) // items done so far, while a deletion runs
+  const [measured, setMeasured] = useState<{ key: string; bytes: number } | null>(null)
+  const dialog = useRef<HTMLDialogElement>(null)
+
+  const scanning = h.status.phase === 'scanning'
 
   const sorted = useMemo(() => [...projects].sort((a, b) => total(b, mode) - total(a, mode)), [projects, mode])
   const all = sorted.flatMap((p) => p.artifacts)
@@ -82,7 +75,7 @@ export default function App() {
         <h1 className="flex items-center gap-2.5 text-[19px] font-bold tracking-[0.01em]">
           <Mark /> Headroom
         </h1>
-        <button onClick={chooseRoot} className="flex items-center gap-2 rounded-md border border-rule px-2.5 py-1 text-[14px] hover:border-ink" title="Escolher outra pasta raiz">
+        <button onClick={h.chooseRoot} className="flex items-center gap-2 rounded-md border border-rule px-2.5 py-1 text-[14px] hover:border-ink" title="Escolher outra pasta raiz">
           <Folder /> {h.root || '~'}
         </button>
         {!h.live && <span className="rounded border border-rule px-2 py-0.5 text-[12px] font-medium tracking-[0.04em] text-graphite uppercase">Dados de exemplo</span>}
@@ -94,7 +87,7 @@ export default function App() {
             </button>
           ))}
         </div>
-        <button onClick={rescan} className="rounded-md border border-ink px-3.5 py-1.5 text-[14px] font-semibold hover:bg-paper-2">Escanear</button>
+        <button onClick={h.rescan} className="rounded-md border border-ink px-3.5 py-1.5 text-[14px] font-semibold hover:bg-paper-2">Escanear</button>
       </header>
 
       <section className="flex min-h-0 flex-col px-8 pt-4 pb-3">
@@ -426,11 +419,13 @@ function Folder() {
 }
 
 function Mark() {
+  // The Headroom gauge: ink is what stays, blue is what gets freed, the dashed line is the headroom left.
   return (
-    <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true">
-      <rect x="1.5" y="1.5" width="19" height="19" fill="none" stroke="currentColor" strokeWidth="3" />
-      <path d="M12 3v16M12 10h7" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M3 13l6-6M3 18l6-6" stroke="var(--color-draft)" strokeWidth="1.5" />
+    <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="4.5" y="1.8" width="15" height="20.4" rx="3" fill="none" stroke="currentColor" strokeWidth="2.2" />
+      <path d="M7.2 14.2q4.8 1.8 9.6 0V19H7.2z" fill="currentColor" />
+      <path d="M7.2 9.8q4.8 1.8 9.6 0v2.6q-4.8 1.8-9.6 0z" fill="var(--color-draft)" />
+      <path d="M7.6 6q4.4 1.5 8.8 0" fill="none" stroke="currentColor" strokeWidth="1" strokeDasharray="1.4 1.1" />
     </svg>
   )
 }

@@ -28,7 +28,8 @@ Linux desktop. Scan root picked with the native folder dialog. Results stream in
 - `dist/` and `build/` are off by default (sometimes versioned).
 - Phases: v0 scan + list + real delete (see specs/prd-varredura-e-limpeza), v2 Docker tab, v3 packaging (.deb / AppImage).
 - One scan root per session, default `~` (hidden folders included), not remembered between sessions; scans on open; nothing preselected.
-- Undecided: config file for custom rules, scheduling.
+- Background mode: tray icon, disk-full and recoverable-space notifications, periodic scan every 6 h (see specs/prd-segundo-plano).
+- Undecided: config file for custom rules, settings screen, start with the session.
 
 ## Brand Commitments
 - Name: **Headroom** (binary/package: `headroom`). Meaning: spare room, a safety margin; it names the outcome (free disk), not the act of deleting. Chosen over kerf, tare, husk, coppice, decant, fettle, pare, ballast.

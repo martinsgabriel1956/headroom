@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- Headroom: a disk gauge. Ink is what stays, blue is what gets freed, the dashed line is the headroom left. -->
+  <rect x="64" y="64" width="896" height="896" rx="200" fill="#fbfbf9" stroke="#d6d6d0" stroke-width="8"/>
+  <g transform="translate(512 512) scale(30) translate(-12 -12)">
+    <rect x="4.5" y="1.8" width="15" height="20.4" rx="3" fill="none" stroke="#1a1a1a" stroke-width="2.2"/>
+    <path d="M7.2 14.2q4.8 1.8 9.6 0V19H7.2z" fill="#1a1a1a"/>
+    <path d="M7.2 9.8q4.8 1.8 9.6 0v2.6q-4.8 1.8-9.6 0z" fill="#2f5d8a"/>
+    <path d="M7.6 6q4.4 1.5 8.8 0" fill="none" stroke="#1a1a1a" stroke-width="1" stroke-dasharray="1.4 1.1"/>
+  </g>
+</svg>
