@@ -207,7 +207,6 @@ Não há métrica remota, porque nada sai da máquina.
 - **Pastas de ferramentas em `~`.** O usuário aceitou o risco no PRD (RF7). Nada técnico mitiga além da confirmação explícita.
 - **Corrida entre varredura e exclusão.** A revalidação cobre o caso da pasta que mudou. Um arquivo novo criado dentro do artefato entre a medição e a exclusão faz o `freed` subestimar um pouco. Isso é aceitável dentro da margem de 5%.
 - **`remove_dir_all` parcial.** Tratado como recusa com motivo (ver Pontos de integração).
-- **CSP desligada.** `tauri.conf.json` mantém `csp: null`, como veio do scaffold. O app só carrega o próprio frontend e não usa rede, mas vale ligar uma CSP restrita antes da distribuição (v3).
 - **Montagens FUSE lentas.** São evitadas pelo corte de `st_dev`. Um `stat` na raiz de uma montagem travada ainda pode demorar, e é a única chamada feita nela.
 
 ### Conformidade com regras do projeto
@@ -245,3 +244,7 @@ O projeto não tem `CLAUDE.md` nem diretório de regras. As convenções que se 
 - O risco da CSP ficou anotado.
 
 O resto saiu como planejado: o percurso com `rayon` e cortes de link, disco, artefato e `.git`; o estado por geração; o `Channel`; e o tamanho real por blocos e ligações.
+
+**2026-11-09**. Depois do fechamento:
+- **CSP de produção ligada:** `default-src 'self' ipc: http://ipc.localhost; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:`. Foi verificada no build de release: a tela carrega e a varredura roda. O risco "CSP desligada" saiu da lista.
+- **Nomes repetidos de projeto:** são desambiguados no frontend (`src/names.ts`, com teste).

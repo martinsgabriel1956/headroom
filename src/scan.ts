@@ -2,6 +2,7 @@ import { Channel, invoke, isTauri } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { SAMPLE, type Project } from './data'
+import { withUniqueNames } from './names'
 
 // Wire format of the Rust commands (src-tauri/src/lib.rs).
 type Dto = { id: number; project: string; kind: string; rel: string; rule: string; real: number; apparent: number; days: number }
@@ -39,7 +40,7 @@ export function useHeadroom() {
   // Many artifacts arrive per frame; render at most once per frame.
   const flush = () => {
     cancelAnimationFrame(frame.current)
-    frame.current = requestAnimationFrame(() => setView([...projects.current.values()].map((p) => ({ ...p, artifacts: [...p.artifacts] }))))
+    frame.current = requestAnimationFrame(() => setView(withUniqueNames([...projects.current.values()])))
   }
 
   const scan = useCallback((dir?: string) => {

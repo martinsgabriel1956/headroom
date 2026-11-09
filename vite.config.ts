@@ -4,4 +4,6 @@ import { defineConfig } from 'vite'
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  // Rust builds write thousands of files under src-tauri/target; they are not the frontend.
+  server: { watch: { ignored: ['**/src-tauri/**'] } },
 })
