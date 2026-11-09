@@ -426,11 +426,13 @@ function Folder() {
 }
 
 function Mark() {
+  // The Headroom gauge: ink is what stays, blue is what gets freed, the dashed line is the headroom left.
   return (
-    <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true">
-      <rect x="1.5" y="1.5" width="19" height="19" fill="none" stroke="currentColor" strokeWidth="3" />
-      <path d="M12 3v16M12 10h7" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M3 13l6-6M3 18l6-6" stroke="var(--color-draft)" strokeWidth="1.5" />
+    <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="4.5" y="1.8" width="15" height="20.4" rx="3" fill="none" stroke="currentColor" strokeWidth="2.2" />
+      <path d="M7.2 14.2q4.8 1.8 9.6 0V19H7.2z" fill="currentColor" />
+      <path d="M7.2 9.8q4.8 1.8 9.6 0v2.6q-4.8 1.8-9.6 0z" fill="var(--color-draft)" />
+      <path d="M7.6 6q4.4 1.5 8.8 0" fill="none" stroke="currentColor" strokeWidth="1" strokeDasharray="1.4 1.1" />
     </svg>
   )
 }
