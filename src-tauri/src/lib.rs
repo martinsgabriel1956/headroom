@@ -30,6 +30,8 @@ struct Scan {
   root: PathBuf,
   dev: u64,
   items: HashMap<u32, Found>,
+  /// Summary of the finished scan; None while it runs or if it was cancelled.
+  done: Option<DoneDto>,
 }
 
 #[derive(Default)]
@@ -52,6 +54,24 @@ struct ArtifactDto {
 }
 
 #[derive(Serialize, Clone, Debug)]
+struct DoneDto {
+  millis: u64,
+  skipped: u64,
+  count: usize,
+  active: Vec<ActiveDto>,
+}
+
+#[derive(Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct SnapshotDto {
+  generation: u64,
+  root: String,
+  home: String,
+  artifacts: Vec<ArtifactDto>,
+  done: Option<DoneDto>,
+}
+
+#[derive(Serialize, Clone, Debug)]
 struct ActiveDto {
   project: String,
   days: i64,
@@ -63,7 +83,7 @@ enum ScanEvent {
   Started { generation: u64, root: String, home: String },
   Artifact { artifact: ArtifactDto },
   Progress { dirs: u64 },
-  Done { millis: u64, skipped: u64, count: usize, active: Vec<ActiveDto> },
+  Done(DoneDto),
 }
 
 #[derive(Serialize, Clone, Debug)]
@@ -118,7 +138,7 @@ fn run_scan(state: &AppState, root: PathBuf, home: String, emit: &(dyn Fn(ScanEv
   let root = fs::canonicalize(&root).map_err(|e| format!("Não deu para abrir {}: {e}", root.display()))?;
   let dev = fs::metadata(&root).map_err(|e| e.to_string())?.dev();
   let generation = state.generation.fetch_add(1, SeqCst) + 1;
-  *state.last.lock().unwrap() = Some(Scan { generation, root: root.clone(), dev, items: HashMap::new() });
+  *state.last.lock().unwrap() = Some(Scan { generation, root: root.clone(), dev, items: HashMap::new(), done: None });
   emit(ScanEvent::Started { generation, root: root.display().to_string(), home });
 
   let t0 = Instant::now();
@@ -149,8 +169,8 @@ fn run_scan(state: &AppState, root: PathBuf, home: String, emit: &(dyn Fn(ScanEv
     return Ok(());
   }
 
-  let g = state.last.lock().unwrap();
-  let sc = current(&g, generation)?;
+  let mut g = state.last.lock().unwrap();
+  let sc = g.as_mut().filter(|s| s.generation == generation).ok_or("A varredura mudou. Escaneie de novo.")?;
   let projects: HashSet<&Path> = sc.items.values().map(|f| f.project.as_path()).collect();
   let active = scan::active_projects(&recent, projects)
     .into_iter()
@@ -158,7 +178,10 @@ fn run_scan(state: &AppState, root: PathBuf, home: String, emit: &(dyn Fn(ScanEv
     .collect();
   let (millis, skipped, count) = (t0.elapsed().as_millis() as u64, counters.skipped.load(Relaxed), sc.items.len());
   log::info!("varredura de {}: {count} artefatos em {millis} ms, {} pastas, {skipped} puladas", root.display(), counters.dirs.load(Relaxed));
-  emit(ScanEvent::Done { millis, skipped, count, active });
+  let done = DoneDto { millis, skipped, count, active };
+  sc.done = Some(done.clone());
+  drop(g);
+  emit(ScanEvent::Done(done));
   Ok(())
 }
 
@@ -220,6 +243,29 @@ async fn scan(app: AppHandle, root: Option<String>, on_event: Channel<ScanEvent>
   .map_err(|e| e.to_string())?
 }
 
+fn home() -> String {
+  std::env::var("HOME").unwrap_or_default()
+}
+
+/// The whole current scan at once, for a window that was hidden while it ran (PRD RF14).
+#[tauri::command]
+fn snapshot(state: State<AppState>) -> Option<SnapshotDto> {
+  snapshot_of(&state)
+}
+
+fn snapshot_of(state: &AppState) -> Option<SnapshotDto> {
+  let g = state.last.lock().unwrap();
+  let sc = g.as_ref()?;
+  let now = unix_now();
+  Some(SnapshotDto {
+    generation: sc.generation,
+    root: sc.root.display().to_string(),
+    home: home(),
+    artifacts: sc.items.values().map(|f| dto(f, now)).collect(),
+    done: sc.done.clone(),
+  })
+}
+
 #[tauri::command]
 fn measure(state: State<AppState>, generation: u64, ids: Vec<u32>) -> Result<u64, String> {
   let g = state.last.lock().unwrap();
@@ -244,7 +290,7 @@ pub fn run() {
     .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_log::Builder::default().level(log::LevelFilter::Info).build())
     .manage(AppState::default())
-    .invoke_handler(tauri::generate_handler![scan, measure, delete])
+    .invoke_handler(tauri::generate_handler![scan, measure, delete, snapshot])
     .run(tauri::generate_context!())
     .expect("error while building tauri application");
 }
@@ -306,10 +352,23 @@ mod tests {
     let state = AppState::default();
     let events = collect(&state, &t);
     assert!(matches!(events.first(), Some(ScanEvent::Started { generation: 1, .. })));
-    assert!(matches!(events.last(), Some(ScanEvent::Done { count: 2, .. })));
+    assert!(matches!(events.last(), Some(ScanEvent::Done(DoneDto { count: 2, .. }))));
     let ids: HashSet<u32> = events.iter().filter_map(|e| match e { ScanEvent::Artifact { artifact } => Some(artifact.id), _ => None }).collect();
     let g = state.last.lock().unwrap();
     assert_eq!(ids, g.as_ref().unwrap().items.keys().copied().collect());
+  }
+
+  #[test]
+  fn snapshot_returns_the_finished_scan() {
+    let t = test_dir("lib-snapshot");
+    tree(&t);
+    let state = AppState::default();
+    assert!(snapshot_of(&state).is_none(), "nothing before the first scan");
+    let events = collect(&state, &t);
+    let streamed: HashSet<u32> = events.iter().filter_map(|e| match e { ScanEvent::Artifact { artifact } => Some(artifact.id), _ => None }).collect();
+    let snap = snapshot_of(&state).unwrap();
+    assert_eq!(snap.artifacts.iter().map(|a| a.id).collect::<HashSet<_>>(), streamed);
+    assert_eq!(snap.done.unwrap().count, 2);
   }
 
   #[test]
