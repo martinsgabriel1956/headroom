@@ -83,11 +83,12 @@ export function useHeadroom() {
   useEffect(() => scan(), [scan])
 
   const all = () => [...projects.current.values()].flatMap((p) => p.artifacts.map((a) => ({ p, a })))
-  const measure = async (ids: string[]): Promise<number> => {
+  // Stable identity: callers use it as an effect dependency. It only reads refs.
+  const measure = useCallback(async (ids: string[]): Promise<number> => {
     if (live) return invoke<number>('measure', { generation: generation.current, ids: ids.map(Number) })
     const set = new Set(ids)
-    return all().filter(({ a }) => set.has(a.id)).reduce((s, { a }) => s + a.real, 0)
-  }
+    return [...projects.current.values()].flatMap((p) => p.artifacts).filter((a) => set.has(a.id)).reduce((s, a) => s + a.real, 0)
+  }, [])
 
   return {
     live,

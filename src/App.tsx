@@ -1,5 +1,6 @@
-import { useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { ACTIVE_DAYS, SAMPLE, type Artifact, type Project } from './data'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { ACTIVE_DAYS, type Artifact, type Project } from './data'
+import { useHeadroom, type DeleteResult, type Status } from './scan'
 import { squarify, type Rect } from './treemap'
 
 type Mode = 'real' | 'apparent'
@@ -14,18 +15,40 @@ const total = (p: Project, m: Mode) => p.artifacts.reduce((s, a) => s + size(a, 
 const isActive = (p: Project) => p.days < ACTIVE_DAYS
 
 export default function App() {
-  const [projects, setProjects] = useState(SAMPLE)
+  const h = useHeadroom()
+  const projects = h.projects
   const [mode, setMode] = useState<Mode>('real')
-  const [selected, setSelected] = useState<Set<string>>(() => new Set(['editor/target', 'sworn/target', 'dev-brain/.venv', 'http-client/node_modules']))
+  const [selected, setSelected] = useState<Set<string>>(() => new Set())
   const [hover, setHover] = useState<string | null>(null)
-  const [freed, setFreed] = useState<number | null>(null)
+  const [result, setResult] = useState<DeleteResult | null>(null)
+  const [deleting, setDeleting] = useState<number | null>(null) // items done so far, while a deletion runs
+  const [measured, setMeasured] = useState<{ key: string; bytes: number } | null>(null)
   const dialog = useRef<HTMLDialogElement>(null)
+
+  // A new scan starts from a clean slate (PRD RF3, RF9).
+  const scanning = h.status.phase === 'scanning'
+  useEffect(() => {
+    if (scanning) {
+      setSelected(new Set())
+      setResult(null)
+    }
+  }, [scanning])
 
   const sorted = useMemo(() => [...projects].sort((a, b) => total(b, mode) - total(a, mode)), [projects, mode])
   const all = sorted.flatMap((p) => p.artifacts)
   const grand = all.reduce((s, a) => s + size(a, mode), 0)
-  const picked = all.filter((a) => selected.has(a.id))
-  const pickedBytes = picked.reduce((s, a) => s + a.real, 0) // deletion always frees the real number
+  const pickedRows = sorted.flatMap((p) => p.artifacts.filter((a) => selected.has(a.id)).map((a) => ({ p, a })))
+  const picked = pickedRows.map((r) => r.a)
+  // Deletion always frees the real number. The backend measures the selection exactly (shared
+  // hardlinks, RF19); until it answers, the local sum stands in.
+  const key = picked.map((a) => a.id).sort().join(',')
+  const { measure } = h
+  useEffect(() => {
+    if (!key) return
+    const t = setTimeout(() => measure(key.split(',')).then((bytes) => setMeasured({ key, bytes }), () => {}), 150)
+    return () => clearTimeout(t)
+  }, [key, measure])
+  const pickedBytes = measured?.key === key ? measured.bytes : picked.reduce((s, a) => s + a.real, 0)
   const pickedActive = sorted.filter((p) => isActive(p) && p.artifacts.some((a) => selected.has(a.id)))
   const real = mode === 'apparent' ? ' reais' : '' // flag real figures while the screen shows apparent ones
 
@@ -36,11 +59,15 @@ export default function App() {
       return n
     })
 
-  const clean = () => {
-    // ponytail: removes from local state only; the Rust delete command replaces this.
-    setFreed(pickedBytes)
-    setProjects((ps) => ps.map((p) => ({ ...p, artifacts: p.artifacts.filter((a) => !selected.has(a.id)) })).filter((p) => p.artifacts.length))
+  const clean = async () => {
+    setDeleting(0)
+    try {
+      setResult(await h.remove(picked.map((a) => a.id), setDeleting))
+    } catch (e) {
+      setResult({ freed: 0, refused: [{ label: 'Exclusão', reason: String(e) }] })
+    }
     setSelected(new Set())
+    setDeleting(null)
     dialog.current?.close()
   }
 
@@ -50,10 +77,10 @@ export default function App() {
         <h1 className="flex items-center gap-2.5 text-[19px] font-bold tracking-[0.01em]">
           <Mark /> Headroom
         </h1>
-        <button className="flex items-center gap-2 rounded-md border border-rule px-2.5 py-1 text-[14px] hover:border-ink" title="Escolher outra pasta raiz">
-          <Folder /> ~/Documentos/development
+        <button onClick={h.chooseRoot} className="flex items-center gap-2 rounded-md border border-rule px-2.5 py-1 text-[14px] hover:border-ink" title="Escolher outra pasta raiz">
+          <Folder /> {h.root || '~'}
         </button>
-        <span className="rounded border border-rule px-2 py-0.5 text-[12px] font-medium tracking-[0.04em] text-graphite uppercase">Dados de exemplo</span>
+        {!h.live && <span className="rounded border border-rule px-2 py-0.5 text-[12px] font-medium tracking-[0.04em] text-graphite uppercase">Dados de exemplo</span>}
         <div role="radiogroup" aria-label="Tamanho" className="ml-auto flex overflow-hidden rounded-md border border-ink">
           {(['real', 'apparent'] as const).map((m) => (
             <button key={m} role="radio" aria-checked={mode === m} onClick={() => setMode(m)}
@@ -62,18 +89,21 @@ export default function App() {
             </button>
           ))}
         </div>
-        <button className="rounded-md border border-ink px-3.5 py-1.5 text-[14px] font-semibold hover:bg-paper-2">Escanear</button>
+        <button onClick={h.rescan} className="rounded-md border border-ink px-3.5 py-1.5 text-[14px] font-semibold hover:bg-paper-2">Escanear</button>
       </header>
 
       <section className="flex min-h-0 flex-col px-8 pt-4 pb-3">
         <div className="mb-2 flex items-baseline gap-3">
-          <span className="text-[15px]"><b className="text-[17px]">{fmt(grand)}</b> recuperáveis em {sorted.length} projetos</span>
+          <span className="text-[15px]"><b className="text-[16px]">{fmt(grand)}</b> recuperáveis em {sorted.length} projetos</span>
           <span className="text-[12px] font-medium tracking-[0.06em] text-graphite uppercase">Planta do disco · área = espaço {mode === 'real' ? 'real' : 'aparente'}</span>
+          <span role="status" aria-live="polite" className="ml-auto text-[13px] text-graphite">{statusText(h.status)}</span>
         </div>
-        {sorted.length ? (
+        {h.status.phase === 'error' ? (
+          <div className="grid flex-1 place-items-center border-4 border-ink px-6 text-center">{h.status.message}</div>
+        ) : sorted.length ? (
           <Plan projects={sorted} mode={mode} selected={selected} hover={hover} setHover={setHover} toggle={toggle} />
         ) : (
-          <div className="grid flex-1 place-items-center border-4 border-ink text-graphite">Nada para limpar nesta pasta.</div>
+          <div className="grid flex-1 place-items-center border-4 border-ink text-graphite">{scanning ? 'Procurando artefatos…' : 'Nada para limpar nesta pasta.'}</div>
         )}
       </section>
 
@@ -131,8 +161,18 @@ export default function App() {
       </section>
 
       <footer className="flex items-center gap-10 border-t-[1.5px] border-ink px-8">
-        {freed !== null && !picked.length ? (
-          <p className="flex-1 text-[15px]"><b>{fmt(freed)} liberados.</b> <span className="text-graphite">Tudo volta com npm install ou cargo build quando você precisar.</span></p>
+        {result && !picked.length ? (
+          <p className="line-clamp-2 flex-1 text-[15px]" title={result.refused.map((r) => `${r.label}: ${r.reason}`).join('\n')}>
+            <b>{fmt(result.freed)} liberados.</b>{' '}
+            {result.refused.length ? (
+              <span>
+                {result.refused.length} {result.refused.length === 1 ? 'não apagada' : 'não apagadas'}:{' '}
+                <span className="text-graphite">{result.refused.map((r) => `${r.label} (${r.reason})`).join('; ')}</span>
+              </span>
+            ) : (
+              <span className="text-graphite">Tudo volta com npm install ou cargo build quando você precisar.</span>
+            )}
+          </p>
         ) : (
           <DimensionLine part={pickedBytes} whole={all.reduce((s, a) => s + a.real, 0)} />
         )}
@@ -148,8 +188,8 @@ export default function App() {
           <p className="mt-2 text-[15px] text-graphite">Libera {fmt(pickedBytes)} de espaço real. Não vai para a lixeira. Cada pasta foi validada pela regra e volta com o build ou install do projeto.</p>
           <div className="mt-4 flex justify-between text-[12px] font-semibold tracking-[0.06em] text-graphite uppercase"><span>Pasta</span><span>Espaço real</span></div>
           <ul className="mt-1 max-h-48 overflow-auto border-y border-rule py-2 text-[14px]">
-            {picked.map((a) => (
-              <li key={a.id} className="flex justify-between py-1"><span>{a.id.split('/')[0]}/{a.rel}</span><span>{fmt(a.real)}</span></li>
+            {pickedRows.map(({ p, a }) => (
+              <li key={a.id} className="flex justify-between gap-4 py-1"><span className="truncate">{p.name}/{a.rel}</span><span className="shrink-0">{fmt(a.real)}</span></li>
             ))}
           </ul>
           {pickedActive.length > 0 && (
@@ -160,12 +200,22 @@ export default function App() {
           )}
         </div>
         <div className="flex justify-end gap-3 border-t border-rule px-6 py-4">
-          <button autoFocus onClick={() => dialog.current?.close()} className="rounded-md border border-ink px-4 py-2 font-semibold hover:bg-paper-2">Cancelar</button>
-          <button onClick={clean} className="rounded-md bg-brick px-4 py-2 font-semibold text-paper hover:bg-[#74210f]">Apagar {fmt(pickedBytes)}</button>
+          <button autoFocus disabled={deleting !== null} onClick={() => dialog.current?.close()} className="rounded-md border border-ink px-4 py-2 font-semibold hover:bg-paper-2 disabled:border-rule disabled:text-graphite">Cancelar</button>
+          <button disabled={deleting !== null} onClick={clean} className="rounded-md bg-brick px-4 py-2 font-semibold text-paper hover:bg-[#74210f] disabled:opacity-80">
+            {deleting !== null ? `Apagando ${Math.min(deleting + 1, picked.length)} de ${picked.length}…` : `Apagar ${fmt(pickedBytes)}`}
+          </button>
         </div>
       </dialog>
     </div>
   )
+}
+
+function statusText(s: Status) {
+  if (s.phase === 'scanning') return `Varrendo… ${s.dirs.toLocaleString('pt-BR')} pastas lidas`
+  if (s.phase === 'error') return 'A varredura falhou'
+  const secs = (s.millis / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })
+  const skipped = s.skipped ? ` · ${s.skipped} ${s.skipped === 1 ? 'pasta' : 'pastas'} sem permissão` : ''
+  return `${s.count} ${s.count === 1 ? 'artefato' : 'artefatos'} em ${secs} s${skipped}`
 }
 
 // Rough text widths for Barlow, used only to decide whether a label fits in a room.
