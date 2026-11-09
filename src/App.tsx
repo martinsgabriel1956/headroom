@@ -234,7 +234,18 @@ function Plan(props: {
     return () => ro.disconnect()
   }, [])
 
-  const rooms = squarify(projects.map((p) => ({ id: p.id, value: total(p, mode) })), 0, 0, dim.w, dim.h)
+  // A real home folder holds hundreds of projects. The plan draws the big ones as rooms and pools the
+  // rest into one "others" room; every project is still in the list below.
+  const MAX_ROOMS = 24, MIN_SHARE = 0.01
+  const grand = projects.reduce((s, p) => s + total(p, mode), 0)
+  const shown = projects.filter((p, i) => i < MAX_ROOMS && total(p, mode) >= grand * MIN_SHARE)
+  const rest = projects.slice(shown.length)
+  const restBytes = rest.reduce((s, p) => s + total(p, mode), 0)
+  const REST = '\0rest'
+  const rooms = squarify(
+    [...shown.map((p) => ({ id: p.id, value: total(p, mode) })), ...(rest.length ? [{ id: REST, value: restBytes }] : [])],
+    0, 0, dim.w, dim.h,
+  )
   const WALL = 1.5 // half of the 3px wall between rooms
 
   // Every room is lettered: name over area when it fits, otherwise a key number explained below the plan.
@@ -261,8 +272,22 @@ function Plan(props: {
       <div className="min-h-0 flex-1 border-4 border-ink bg-ink">
         <div ref={box} className="relative h-full w-full">
           {rooms.map((r) => {
-            const p = projects.find((x) => x.id === r.id)!
             const w = r.w - WALL * 2, h = r.h - WALL * 2
+            if (r.id === REST) {
+              const text = `+${rest.length} ${rest.length === 1 ? 'projeto' : 'projetos'}`
+              return (
+                <div key={r.id} title={`${text} menores · ${fmt(restBytes)} · estão todos na lista`}
+                  className="absolute overflow-hidden bg-paper-2" style={{ left: r.x + WALL, top: r.y + WALL, width: w, height: h }}>
+                  {w > 96 && h > 44 && (
+                    <span className="absolute top-2 left-2 whitespace-nowrap">
+                      <span className="block text-[13px] leading-[18px] font-bold tracking-[0.05em] uppercase">{text}</span>
+                      <span className="block text-[16px] leading-[1.15] font-semibold">{fmt(restBytes)}</span>
+                    </span>
+                  )}
+                </div>
+              )
+            }
+            const p = projects.find((x) => x.id === r.id)!
             const label = lettering(p, w, h)
             if (label.kind === 'key' && label.tiny) {
               // Neighbouring alcoves letter their bottom-left corner, so the callout keeps to the room's far end.
@@ -320,6 +345,9 @@ function Plan(props: {
         {keyed.map(({ n, p }) => (
           <span key={n} className="flex items-center gap-1.5 whitespace-nowrap"><KeyTag n={n} active={isActive(p)} /> {p.name} <span className="text-graphite">{fmt(total(p, mode))}</span></span>
         ))}
+        {rest.length > 0 && (
+          <span className="flex items-center gap-2 whitespace-nowrap"><i className="inline-block h-3.5 w-6 border border-ink bg-paper-2" /> +{rest.length} projetos menores <span className="text-graphite">{fmt(restBytes)} · na lista</span></span>
+        )}
       </div>
     </div>
   )
