@@ -1,5 +1,7 @@
+mod background;
 mod delete;
 mod measure;
+mod notify;
 mod rules;
 mod scan;
 
