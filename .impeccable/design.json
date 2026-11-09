@@ -1,0 +1,373 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-09T16:57:54+00:00",
+  "title": "Design System: Headroom",
+  "extensions": {
+    "colorMeta": {
+      "paper": {
+        "role": "neutral",
+        "displayName": "Drafting Paper",
+        "canonical": "#fbfbf9",
+        "tonalRamp": [
+          "#2b2b22",
+          "#494937",
+          "#68684b",
+          "#88885d",
+          "#a7a781",
+          "#c2c2ad",
+          "#ddddd4",
+          "#f3f3f1"
+        ]
+      },
+      "paper-2": {
+        "role": "neutral",
+        "displayName": "Paper Shade",
+        "canonical": "#f0f0eb",
+        "tonalRamp": [
+          "#292923",
+          "#464639",
+          "#64644f",
+          "#828263",
+          "#a2a286",
+          "#bfbfb0",
+          "#dcdcd6",
+          "#f3f3f1"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#1a1a1a",
+        "tonalRamp": [
+          "#262626",
+          "#404040",
+          "#595959",
+          "#737373",
+          "#949494",
+          "#b8b8b8",
+          "#d9d9d9",
+          "#f2f2f2"
+        ]
+      },
+      "graphite": {
+        "role": "neutral",
+        "displayName": "Graphite",
+        "canonical": "#555555",
+        "tonalRamp": [
+          "#262626",
+          "#404040",
+          "#595959",
+          "#737373",
+          "#949494",
+          "#b8b8b8",
+          "#d9d9d9",
+          "#f2f2f2"
+        ]
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Rule Grey",
+        "canonical": "#d6d6d0",
+        "tonalRamp": [
+          "#282825",
+          "#43433d",
+          "#5e5e54",
+          "#7a7a6b",
+          "#9b9b8d",
+          "#bbbbb4",
+          "#dadad7",
+          "#f3f3f2"
+        ]
+      },
+      "draft": {
+        "role": "primary",
+        "displayName": "Drafting Blue",
+        "canonical": "#2f5d8a",
+        "tonalRamp": [
+          "#1b2631",
+          "#2a4056",
+          "#355a7d",
+          "#3e73a8",
+          "#6494c4",
+          "#9eb8d1",
+          "#ced9e4",
+          "#eff2f5"
+        ]
+      },
+      "draft-tint": {
+        "role": "primary",
+        "displayName": "Blue Tint",
+        "canonical": "#e6edf4",
+        "tonalRamp": [
+          "#1e262f",
+          "#2e4051",
+          "#3d5976",
+          "#49739d",
+          "#6e94ba",
+          "#a3b8cc",
+          "#d0d9e1",
+          "#f0f2f5"
+        ]
+      },
+      "brick": {
+        "role": "secondary",
+        "displayName": "Brick",
+        "canonical": "#8f2a1d",
+        "tonalRamp": [
+          "#351b18",
+          "#5d2922",
+          "#8a3429",
+          "#ba3c2b",
+          "#d46254",
+          "#da9d95",
+          "#e7cdca",
+          "#f6efee"
+        ]
+      },
+      "poche-line": {
+        "role": "neutral",
+        "displayName": "Poché Line",
+        "canonical": "#cfcfc8",
+        "tonalRamp": [
+          "#282825",
+          "#43433d",
+          "#5e5e54",
+          "#7a7a6b",
+          "#9a9a8d",
+          "#bbbbb4",
+          "#dadad7",
+          "#f3f3f2"
+        ]
+      },
+      "poche-swatch-line": {
+        "role": "neutral",
+        "displayName": "Poché Swatch Line",
+        "canonical": "#8a8a84",
+        "tonalRamp": [
+          "#272726",
+          "#41413f",
+          "#5b5b57",
+          "#757570",
+          "#969691",
+          "#b9b9b6",
+          "#d9d9d8",
+          "#f2f2f2"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "wordmark": {
+        "displayName": "Wordmark",
+        "purpose": "Top-bar product name beside the mark."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Dialog titles."
+      },
+      "room-area-large": {
+        "displayName": "Room Area (large)",
+        "purpose": "GB dimension inside rooms wider than 220px and taller than 120px."
+      },
+      "room-area": {
+        "displayName": "Room Area",
+        "purpose": "GB dimension inside smaller lettered rooms."
+      },
+      "room-name": {
+        "displayName": "Room Name",
+        "purpose": "Uppercase plan lettering for project rooms."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "List rows and dialog list."
+      },
+      "body-lead": {
+        "displayName": "Body Lead",
+        "purpose": "Summary sentences, dialog copy, primary button text."
+      },
+      "annotation": {
+        "displayName": "Annotation",
+        "purpose": "Paths, legend, dimension-line measures, graphite notes."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Uppercase column heads and the plan caption."
+      },
+      "stamp": {
+        "displayName": "Stamp",
+        "purpose": "The ATIVO stamp only."
+      }
+    },
+    "shadows": [],
+    "motion": [
+      {
+        "name": "measure",
+        "value": "300ms ease-out",
+        "purpose": "Dimension-line bar, ticks and labels re-measuring as the selection changes."
+      }
+    ],
+    "breakpoints": [],
+    "patterns": [
+      {
+        "name": "hatch",
+        "value": "repeating-linear-gradient(135deg, var(--color-draft) 0 1.25px, transparent 1.25px 8px) on var(--color-draft-tint)",
+        "purpose": "Selected alcoves."
+      },
+      {
+        "name": "poche",
+        "value": "repeating-linear-gradient(0deg, #cfcfc8 0 1px, transparent 1px 6px)",
+        "purpose": "Alcoves and key tags of active projects."
+      },
+      {
+        "name": "poche-swatch",
+        "value": "repeating-linear-gradient(0deg, #8a8a84 0 1px, transparent 1px 3.5px) on var(--color-paper)",
+        "purpose": "Legend sample only; denser so it reads at 14px."
+      }
+    ],
+    "lineWeights": [
+      {
+        "name": "boundary",
+        "value": "4px"
+      },
+      {
+        "name": "room-wall",
+        "value": "3px"
+      },
+      {
+        "name": "structural-rule",
+        "value": "1.5px"
+      },
+      {
+        "name": "partition",
+        "value": "1px"
+      }
+    ],
+    "backdrop": "rgb(26 26 26 / 0.35)"
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one main action, \"Limpar N GB\", in the footer at right.",
+      "html": "<button class=\"ds-btn-primary\">Limpar 11,0 GB</button> <button class=\"ds-btn-primary\" disabled>Selecione o que limpar</button>",
+      "css": ".ds-btn-primary{font-family:'Barlow',system-ui,sans-serif;font-variant-numeric:tabular-nums;background:var(--color-ink,#1a1a1a);color:var(--color-paper,#fbfbf9);border:0;border-radius:6px;padding:12px 20px;font-size:15px;font-weight:600;cursor:pointer}.ds-btn-primary:hover{background:#333}.ds-btn-primary:focus-visible{outline:2px solid var(--color-draft,#2f5d8a);outline-offset:2px}.ds-btn-primary:disabled{background:var(--color-rule,#d6d6d0);color:var(--color-graphite,#555555);cursor:default}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Ink-outlined control for Escanear and Cancelar.",
+      "html": "<button class=\"ds-btn-secondary\">Escanear</button>",
+      "css": ".ds-btn-secondary{font-family:'Barlow',system-ui,sans-serif;font-variant-numeric:tabular-nums;background:var(--color-paper,#fbfbf9);color:var(--color-ink,#1a1a1a);border:1px solid var(--color-ink,#1a1a1a);border-radius:6px;padding:6px 14px;font-size:14px;font-weight:600;cursor:pointer}.ds-btn-secondary:hover{background:var(--color-paper-2,#f0f0eb)}.ds-btn-secondary:focus-visible{outline:2px solid var(--color-draft,#2f5d8a);outline-offset:2px}"
+    },
+    {
+      "name": "Destructive Confirm",
+      "kind": "button",
+      "refersTo": "button-destructive",
+      "description": "Brick, only for the final irreversible delete inside the confirm dialog.",
+      "html": "<button class=\"ds-btn-destructive\">Apagar 11,0 GB</button>",
+      "css": ".ds-btn-destructive{font-family:'Barlow',system-ui,sans-serif;font-variant-numeric:tabular-nums;background:var(--color-brick,#8f2a1d);color:var(--color-paper,#fbfbf9);border:0;border-radius:6px;padding:8px 16px;font-size:16px;font-weight:600;cursor:pointer}.ds-btn-destructive:hover{background:#74210f}.ds-btn-destructive:focus-visible{outline:2px solid var(--color-draft,#2f5d8a);outline-offset:2px}"
+    },
+    {
+      "name": "Segmented Toggle",
+      "kind": "nav",
+      "refersTo": "segmented-selected",
+      "description": "Real / Aparente size mode; selected segment is solid ink.",
+      "html": "<div class=\"ds-seg\" role=\"radiogroup\"><button role=\"radio\" aria-checked=\"true\">Real</button><button role=\"radio\" aria-checked=\"false\">Aparente</button></div>",
+      "css": ".ds-seg{display:inline-flex;border:1px solid var(--color-ink,#1a1a1a);border-radius:6px;overflow:hidden}.ds-seg button{font-family:'Barlow',system-ui,sans-serif;font-variant-numeric:tabular-nums;background:var(--color-paper,#fbfbf9);color:var(--color-ink,#1a1a1a);border:0;padding:6px 12px;font-size:13px;font-weight:500;cursor:pointer}.ds-seg button:hover{background:var(--color-paper-2,#f0f0eb)}.ds-seg button[aria-checked=true]{background:var(--color-ink,#1a1a1a);color:var(--color-paper,#fbfbf9)}.ds-seg button:focus-visible{outline:2px solid var(--color-draft,#2f5d8a);outline-offset:-2px}"
+    },
+    {
+      "name": "ATIVO Stamp",
+      "kind": "chip",
+      "refersTo": "stamp",
+      "description": "Rubber-stamp flag for projects modified in the last 7 days.",
+      "html": "<span class=\"ds-stamp\">Ativo · há 2 dias</span>",
+      "css": ".ds-stamp{font-family:'Barlow',system-ui,sans-serif;font-variant-numeric:tabular-nums;display:inline-block;border:1.5px solid var(--color-ink,#1a1a1a);background:var(--color-paper,#fbfbf9);color:var(--color-ink,#1a1a1a);padding:0 6px;font-size:11px;line-height:16px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}"
+    },
+    {
+      "name": "Key Tag",
+      "kind": "chip",
+      "refersTo": "key-tag",
+      "description": "Circled reference number for rooms too small to letter; poché when active.",
+      "html": "<span class=\"ds-key\">1</span> <span class=\"ds-key ds-key-active\">2</span>",
+      "css": ".ds-key{font-family:'Barlow',system-ui,sans-serif;font-variant-numeric:tabular-nums;display:inline-grid;place-items:center;height:18px;min-width:18px;padding:0 4px;box-sizing:border-box;border:1.5px solid var(--color-ink,#1a1a1a);border-radius:9999px;background:var(--color-paper,#fbfbf9);font-size:11px;font-weight:700}.ds-key-active{background-image:repeating-linear-gradient(0deg,#cfcfc8 0 1px,transparent 1px 6px)}"
+    },
+    {
+      "name": "Plan Room",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "A room on the floor plan: ink walls, lettered name over area, alcoves hatched when selected, poché when active, inset ink outline on hover.",
+      "html": "<div class=\"ds-plan\"><div class=\"ds-room\"><button class=\"ds-alcove ds-sel\"></button><button class=\"ds-alcove\"></button><span class=\"ds-letter\"><span class=\"ds-rname\">Editor</span><span class=\"ds-rarea\">7,3 GB</span></span></div><div class=\"ds-room\"><button class=\"ds-alcove ds-poche\"></button><span class=\"ds-letter\"><span class=\"ds-rname\">Sworn <span class=\"ds-stamp2\">Ativo</span></span><span class=\"ds-rarea ds-sm\">2,3 GB</span></span></div></div>",
+      "css": ".ds-plan{font-family:'Barlow',system-ui,sans-serif;font-variant-numeric:tabular-nums;display:flex;gap:3px;width:420px;height:180px;background:var(--color-ink,#1a1a1a);border:4px solid var(--color-ink,#1a1a1a)}.ds-room{position:relative;flex:2;display:flex;gap:1px}.ds-room+.ds-room{flex:1}.ds-alcove{flex:1;border:0;background:var(--color-paper,#fbfbf9);cursor:pointer}.ds-alcove:hover{outline:2px solid var(--color-ink,#1a1a1a);outline-offset:-4px}.ds-alcove:focus-visible{outline:2px solid var(--color-draft,#2f5d8a);outline-offset:2px}.ds-sel{background-color:var(--color-draft-tint,#e6edf4);background-image:repeating-linear-gradient(135deg,var(--color-draft,#2f5d8a) 0 1.25px,transparent 1.25px 8px)}.ds-poche{background-image:repeating-linear-gradient(0deg,#cfcfc8 0 1px,transparent 1px 6px)}.ds-letter{position:absolute;top:8px;left:8px;pointer-events:none;background:var(--color-paper,#fbfbf9);border-radius:2px;padding:2px 6px;white-space:nowrap}.ds-rname{display:flex;gap:8px;align-items:center;font-size:13px;line-height:18px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}.ds-rarea{display:block;font-size:24px;line-height:1.15;font-weight:600}.ds-sm{font-size:16px}.ds-stamp2{border:1.5px solid #1a1a1a;padding:0 6px;font-size:11px;line-height:16px;letter-spacing:.1em}"
+    },
+    {
+      "name": "Dimension Line",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "Footer measure of selected vs remaining real space; 45° slash ticks, blue selected span, each measure centred over its span.",
+      "html": "<div class=\"ds-dim\" style=\"--p:63%\"><div class=\"ds-dim-line\"></div><div class=\"ds-dim-sel\"></div><i style=\"left:0\"></i><i style=\"left:var(--p)\"></i><i style=\"left:100%\"></i><span class=\"ds-dim-a\"><b>11,0 GB</b> selecionados</span><span class=\"ds-dim-b\">6,4 GB ficam</span></div>",
+      "css": ".ds-dim{font-family:'Barlow',system-ui,sans-serif;font-variant-numeric:tabular-nums;position:relative;height:56px;width:480px;font-size:13px;color:var(--color-ink,#1a1a1a)}.ds-dim-line{position:absolute;left:0;right:0;top:25px;border-top:1px solid var(--color-ink,#1a1a1a)}.ds-dim-sel{position:absolute;top:24px;left:0;height:3px;width:var(--p);background:var(--color-draft,#2f5d8a);transition:width .3s ease-out}.ds-dim i{position:absolute;top:18px;width:1px;height:15px;background:var(--color-ink,#1a1a1a);transform:rotate(45deg)}.ds-dim span{position:absolute;top:0;transform:translateX(-50%);white-space:nowrap}.ds-dim-a{left:calc(var(--p)/2)}.ds-dim-b{left:calc(var(--p) + (100% - var(--p))/2);color:var(--color-graphite,#555555)}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Planta Baixa",
+    "overview": "**Creative North Star: \"Planta Baixa\"**\n\nThe disk is drawn as an architectural floor plan. Each project is a room whose area is its real recoverable space, partitioned into alcoves, one per artifact, and every area is given in GB as a dimension. The plan stands in for the category default of a rainbow sunburst or a treemap next to a table. Everything else on the screen is drafting-sheet furniture: a plain top bar, a grouped schedule (the list), and a dimension line in the footer.\n\nThe material is drafting paper and ink. The ground is an off-white sheet. Walls are black ink, getting thinner as they go from the outer boundary to the hairline partitions. Notes are graphite. Drafting blue is the one colored ink, and it only marks the selection. Depth comes from line weight and fill pattern (hatch and poché), never from shadow. The world is light only: it was chosen for a daytime desk.\n\nThe personality is trustworthy and precise. Figures are set in tabular Barlow and always shown in full. Ornament is limited to what a draftsman would actually draw.",
+    "keyCharacteristics": [
+      "Area equals real space; the plan is the data, not a decoration.",
+      "Line weight carries hierarchy: 4px boundary, 3px room walls, 1px alcove partitions.",
+      "One blue, one meaning: selected.",
+      "Fill patterns (hatch, poché) carry state instead of color fills.",
+      "Barlow throughout, tabular figures, plan lettering in tracked capitals.",
+      "No shadows, no gradients as surface, no cards."
+    ],
+    "rules": [
+      {
+        "name": "The One Blue Rule",
+        "body": "Drafting blue means \"selected\" and nothing else. Hover, emphasis, links, and branding never borrow it. The one exception is the mark, whose blue hatch strokes depict a selected room.",
+        "section": "colors"
+      },
+      {
+        "name": "The Last Door Rule",
+        "body": "Brick appears only on the button that performs an irreversible delete, inside the confirmation dialog. The primary \"Limpar\" action stays ink.",
+        "section": "colors"
+      },
+      {
+        "name": "The Whole Figure Rule",
+        "body": "GB figures are never ellipsized or truncated. If a figure doesn't fit, the label moves (key tag, legend, callout); the number keeps all its digits.",
+        "section": "typography"
+      },
+      {
+        "name": "The Tabular Rule",
+        "body": "All figures are tabular, so columns of sizes align and live re-measures don't jitter.",
+        "section": "typography"
+      },
+      {
+        "name": "The Line Weight Rule",
+        "body": "Hierarchy is drawn with line weight: 4px for the plan boundary, 3px between rooms, 1px hairlines between alcoves, and 1.5px ink for structural rules (table head, footer, stamp, key tag, dialog).",
+        "section": "elevation"
+      },
+      {
+        "name": "The Pattern-Not-Paint Rule",
+        "body": "State on the plan is a fill pattern on paper: blue diagonal hatch (135°, 1.25px every 8px) for selected, horizontal poché for active. Solid colored fills are not used on the plan.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** reserve drafting blue (#2f5d8a) for selection: hatch, checkbox, the dimension-line span, and the focus ring.",
+      "**Do** show hover with ink: a 2px inset ink outline on the plan and a paper-2 ground in the list.",
+      "**Do** draw walls at 4px (outer), 3px (between rooms), and 1px (between alcoves).",
+      "**Do** letter every room: name over area, then a circled key tag, then a callout with a leader line, in that order of fallback.",
+      "**Do** mark active projects with poché plus the ATIVO stamp, and keep the legend swatch denser and darker so it reads at small size.",
+      "**Do** set every figure in tabular Barlow and show it whole.",
+      "**Do** end dimension lines with 45° slashes and center each measure over its own span."
+    ],
+    "donts": [
+      "**Don't** ellipsize or truncate a GB figure.",
+      "**Don't** use blue for hover, links, or emphasis.",
+      "**Don't** use brick anywhere except the final destructive confirm.",
+      "**Don't** add shadows, gradient surfaces, or cards; depth is line weight and pattern.",
+      "**Don't** use solid colored fills for state on the plan; use hatch or poché.",
+      "**Don't** add a dark theme; the world is light only, for a daytime desk."
+    ]
+  }
+}
