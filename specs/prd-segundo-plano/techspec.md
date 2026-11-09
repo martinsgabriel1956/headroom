@@ -194,3 +194,18 @@ O `tauri-plugin-log` já existente registra:
 ## Histórico
 
 **2026-11-09**. Documento criado. O usuário escolheu `notify-send` e a varredura automática em baixa prioridade.
+
+**2026-11-09**. Fechamento (`sdd-review`).
+- **`background_scan`:** devolve `Option<(bytes, projetos)>`, em vez de só os bytes. O texto do aviso ("em 176 projetos") precisa da contagem.
+- **Funções novas:**
+  - `recoverable(state)` dá o total real e o número de projetos da última varredura concluída. É usada também no aviso de disco cheio.
+  - `fmt_bytes` repete a formatação da tela.
+- **Organização:** o `snapshot` virou `snapshot_of` (o núcleo testável) mais o comando, e o `show_window` entrou junto com o `notify.rs`.
+- **Verificado com `HEADROOM_FAST=1`:**
+  - a bandeja é detectada;
+  - o X esconde a janela e grava o `closeNoticeShown`;
+  - os avisos de disco cheio e de espaço recuperável saem uma vez em três ciclos;
+  - a varredura automática roda com a janela escondida e leva 1,5 s, contra 0,7 s da manual;
+  - a segunda instância sai e reabre a janela;
+  - a tela reaberta mostra o tempo da varredura automática.
+- **Não verificado:** o clique no ícone da bandeja e no menu, e o clique na notificação (o risco do servidor COSMIC). No Wayland não dá para automatizar esses cliques, e o usuário vai testar.

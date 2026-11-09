@@ -104,3 +104,8 @@ Ficaram por conta da decisão do documento, e o usuário pode mudar:
 - a varredura automática só com a janela escondida.
 
 **2026-11-09**. Ajuste vindo do techspec: no Linux, o AppIndicator não entrega o clique no ícone ao app, e o clique sempre abre o menu. O RF5 passa a ser cumprido pelo item "Abrir Headroom".
+
+**2026-11-09**. Fechamento (`sdd-review`). Todos os RFs estão implementados.
+- **Conferidos com o app rodando em intervalos curtos:** RF1, RF2, RF4, RF7 a RF16 e RF18.
+- **Pendentes de teste manual:** RF5, RF6 e RF17, que dependem de clicar no ícone da bandeja, no menu e na notificação.
+- **Não testado:** o caminho "sem bandeja, o X fecha", porque não há um desktop sem bandeja à mão. Está coberto pela detecção no início do app.

@@ -158,7 +158,7 @@ A drafting sheet: near-white paper, black ink, graphite notes, one blue pencil, 
 - **Poché Swatch Line** (poche-swatch-line): a denser, darker poché (1px every 3.5px), used only for the legend sample so the pattern still reads at 14px.
 
 ### Named Rules
-**The One Blue Rule.** Drafting blue means "selected" and nothing else. Hover, emphasis, links, and branding never borrow it. The one exception is the mark, whose blue hatch strokes depict a selected room.
+**The One Blue Rule.** Drafting blue means "selected" and nothing else. Hover, emphasis, links, and branding never borrow it. The one exception is the logo, a disk gauge whose blue layer is the space being freed (ink below is what stays, the dashed line on top is the headroom left). Its source is `app-icon.svg`, which generates every app and tray icon.
 
 **The Last Door Rule.** Brick appears only on the button that performs an irreversible delete, inside the confirmation dialog. The primary "Limpar" action stays ink.
 
