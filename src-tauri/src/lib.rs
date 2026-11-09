@@ -198,6 +198,15 @@ fn run_delete(state: &AppState, generation: u64, ids: Vec<u32>, emit: &dyn Fn(De
   Ok(DeleteReport { freed, removed, refused })
 }
 
+/// Brings the main window back from the tray, minimized or behind other windows.
+pub(crate) fn show_window(app: &AppHandle) {
+  if let Some(w) = app.get_webview_window("main") {
+    let _ = w.show();
+    let _ = w.unminimize();
+    let _ = w.set_focus();
+  }
+}
+
 #[tauri::command]
 async fn scan(app: AppHandle, root: Option<String>, on_event: Channel<ScanEvent>) -> Result<(), String> {
   let home = std::env::var("HOME").map_err(|_| "Sem $HOME definido.")?;
