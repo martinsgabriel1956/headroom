@@ -209,3 +209,7 @@ O `tauri-plugin-log` já existente registra:
   - a segunda instância sai e reabre a janela;
   - a tela reaberta mostra o tempo da varredura automática.
 - **Não verificado:** o clique no ícone da bandeja e no menu, e o clique na notificação (o risco do servidor COSMIC). No Wayland não dá para automatizar esses cliques, e o usuário vai testar.
+
+**2026-11-10**. O risco "a ação de clique depende do servidor" se confirmou. O servidor de notificações do COSMIC não suporta ações, e o `notify-send` avisa "Displaying non-interactively" e sai na hora. Por isso nenhuma thread fica parada, mas o clique não chega ao app. Uma alternativa a avaliar é a dica `desktop-entry`, que faz o servidor abrir o app pelo `.desktop`. Com a instância única, isso traria a janela, mas só funciona com o app instalado.
+
+**2026-11-10**. A dica `desktop-entry` foi testada com um `.desktop` local apontando para o binário de release: o servidor do COSMIC também a ignora no clique. O `notify.rs` continua como está (`--action=default`), porque funciona nos servidores que suportam ações, como o GNOME e o KDE. No COSMIC, o aviso é só informativo.

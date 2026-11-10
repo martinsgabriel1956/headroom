@@ -109,3 +109,7 @@ Ficaram por conta da decisão do documento, e o usuário pode mudar:
 - **Conferidos com o app rodando em intervalos curtos:** RF1, RF2, RF4, RF7 a RF16 e RF18.
 - **Pendentes de teste manual:** RF5, RF6 e RF17, que dependem de clicar no ícone da bandeja, no menu e na notificação.
 - **Não testado:** o caminho "sem bandeja, o X fecha", porque não há um desktop sem bandeja à mão. Está coberto pela detecção no início do app.
+
+**2026-11-10**. RF17 não é atendido no COSMIC. O servidor de notificações responde "Actions are not supported by this notifications server" e mostra o aviso sem ação de clique. O resto do segundo plano funciona. Fica pendente decidir como abrir a janela a partir do aviso nesse desktop.
+
+**2026-11-10**. Testada a alternativa de abrir o app pelo `.desktop` ao clicar no aviso: no COSMIC, o clique também não aciona nada. Nesse desktop o RF17 fica sem caminho pela notificação. A janela continua acessível pelo menu da bandeja ("Abrir Headroom"), que é o caminho a usar ali.
