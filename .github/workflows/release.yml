@@ -1,0 +1,103 @@
+name: Release
+
+# A version tag builds the Linux packages (.deb, AppImage, .rpm) and publishes them on GitHub Releases:
+#   bump package.json, src-tauri/tauri.conf.json and src-tauri/Cargo.toml, then `git tag v0.2.0 && git push --tags`
+# A manual run only builds: the packages stay as artifacts of the run (`gh workflow run Release --ref <branch>`).
+# Linux only: the app reads free space with statvfs, notifies through notify-send and finds the tray on D-Bus.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  # create the release and upload its files
+  contents: write
+
+jobs:
+  # cheap checks before compiling
+  check:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      # a v0.2.0 tag over a 0.1.0 build would publish files named after the wrong version
+      - name: Tag matches the app version
+        if: github.event_name == 'push'
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          app=$(jq -r .version src-tauri/tauri.conf.json)
+          web=$(jq -r .version package.json)
+          rust=$(sed -n 's/^version = "\(.*\)"/\1/p' src-tauri/Cargo.toml | head -1)
+          if [ "$tag" != "$app" ] || [ "$tag" != "$web" ] || [ "$tag" != "$rust" ]; then
+            echo "::error::tag $GITHUB_REF_NAME, tauri.conf.json $app, package.json $web, Cargo.toml $rust: suba as quatro juntas"
+            exit 1
+          fi
+
+  build:
+    needs: check
+    # the oldest supported runner: an AppImage built on an older glibc runs on more distributions
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Tauri system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libdbus-1-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+
+      - name: Tests
+        run: |
+          npm test
+          cargo test --manifest-path src-tauri/Cargo.toml
+
+      - uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # no tag on a manual run: the action builds and publishes nothing
+          tagName: ${{ github.event_name == 'push' && github.ref_name || '' }}
+          # __VERSION__ is filled by the action from tauri.conf.json: "Headroom 0.1.0"
+          releaseName: Headroom __VERSION__
+          generateReleaseNotes: true
+          args: --bundles deb,appimage,rpm
+
+      - name: Packages of a manual run
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v7
+        with:
+          name: headroom-linux
+          path: |
+            src-tauri/target/release/bundle/**/*.deb
+            src-tauri/target/release/bundle/**/*.rpm
+            src-tauri/target/release/bundle/**/*.AppImage
+          if-no-files-found: error
+          retention-days: 7
+
+  # checksums of what people download
+  checksums:
+    needs: build
+    if: github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: SHA256SUMS
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --dir pkgs \
+            --pattern '*.deb' --pattern '*.rpm' --pattern '*.AppImage'
+          cd pkgs
+          sha256sum -- * > SHA256SUMS
+          cat SHA256SUMS
+          gh release upload "$GITHUB_REF_NAME" SHA256SUMS --clobber --repo "$GITHUB_REPOSITORY"

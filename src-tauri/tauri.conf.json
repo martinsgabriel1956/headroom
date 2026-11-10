@@ -27,16 +27,35 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": [
+      "deb",
+      "appimage",
+      "rpm"
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
-      "icons/icon.icns",
-      "icons/icon.ico"
+      "icons/icon.png"
     ],
-    "android": {
-      "debugApplicationIdSuffix": ".debug"
+    "category": "Utility",
+    "shortDescription": "Limpa artefatos regeneráveis de projetos mostrando o espaço real liberado",
+    "longDescription": "Encontra node_modules, target, .venv e caches dos seus projetos, valida cada um por uma regra, mostra o espaço que de fato volta (contando hardlinks) e apaga só o que você confirmar. Fica na bandeja e avisa quando o disco enche ou quando vale limpar.",
+    "publisher": "Gabriel Martins",
+    "homepage": "https://github.com/martinsgabriel1956/headroom",
+    "license": "MIT",
+    "copyright": "Copyright (c) 2026 Gabriel Martins",
+    "linux": {
+      "deb": {
+        "recommends": [
+          "libnotify-bin"
+        ]
+      },
+      "rpm": {
+        "recommends": [
+          "libnotify"
+        ]
+      }
     }
   }
 }

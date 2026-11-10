@@ -40,10 +40,38 @@ App desktop para Linux que acha os `node_modules`, `target`, `.venv` e caches do
 
 ## Instalação
 
-Ainda não há pacotes publicados. Por enquanto, o app é compilado a partir do código.
+Baixe o pacote em [Releases](https://github.com/martinsgabriel1956/headroom/releases/latest). Só há versão para Linux.
+
+```bash
+# Debian, Ubuntu e derivados
+sudo apt install ./Headroom_*_amd64.deb
+```
+
+```bash
+# Fedora, RHEL e derivados
+sudo dnf install ./Headroom-*.rpm
+```
+
+```bash
+# Outras distribuições Linux
+chmod +x Headroom_*_amd64.AppImage
+./Headroom_*_amd64.AppImage
+```
+
+Para conferir o que baixou, use o `SHA256SUMS` do release:
+
+```bash
+sha256sum -c SHA256SUMS --ignore-missing
+```
+
+### O que mais o app usa
+
+- **Bandeja do sistema:** um ambiente com bandeja (StatusNotifierItem). O KDE e o COSMIC têm. No GNOME, é preciso a extensão AppIndicator. Sem bandeja, fechar a janela encerra o app.
+- **Avisos:** o `notify-send` (pacote `libnotify-bin` no Debian e no Ubuntu). Sem ele, os avisos só vão para o log. No COSMIC, clicar no aviso não abre o app; use "Abrir Headroom" no menu da bandeja.
+
+### Compilar a partir do código
 
 **Requisitos:**
-- Linux
 - Rust 1.90 ou mais novo
 - Node.js 22 ou mais novo
 - As bibliotecas de sistema do Tauri 2. No Debian e no Ubuntu:
@@ -52,19 +80,25 @@ Ainda não há pacotes publicados. Por enquanto, o app é compilado a partir do 
 sudo apt install libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
 ```
 
-Para outras distribuições, veja os [pré-requisitos do Tauri](https://v2.tauri.app/start/prerequisites/).
-
-Depois, rode cada comando na pasta do projeto:
+Para outras distribuições, veja os [pré-requisitos do Tauri](https://v2.tauri.app/start/prerequisites/). Depois, rode cada comando na pasta do projeto:
 
 ```bash
 npm install
 ```
 
 ```bash
-npm run tauri build -- --no-bundle
+npm run tauri build
 ```
 
-O executável fica em `src-tauri/target/release/headroom`.
+Os pacotes ficam em `src-tauri/target/release/bundle/`.
+
+### Publicar uma versão
+
+Suba o número da versão em `package.json`, `src-tauri/tauri.conf.json` e `src-tauri/Cargo.toml`, e envie a tag. O workflow `Release` testa, gera o `.deb`, o AppImage e o `.rpm`, e publica tudo com o `SHA256SUMS`. Exemplo para a versão 0.2.0:
+
+```bash
+git tag v0.2.0 && git push --tags
+```
 
 ## Desenvolvimento
 
